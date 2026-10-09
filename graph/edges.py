@@ -42,10 +42,10 @@ def build_linear_agent_graph(
     若未提供 tool_node: START -> planner -> END
     """
     builder = create_agent_graph_builder(AgentState)
-    builder.add_node("planner", planner_node)  # type: ignore[call-overload]
+    builder.add_node("planner", planner_node)  # type: ignore
 
     if tool_node is not None:
-        builder.add_node("tool_executor", tool_node)  # type: ignore[call-overload]
+        builder.add_node("tool_executor", tool_node)  # type: ignore
         connect_sequence(builder, [START, "planner", "tool_executor", END])
     else:
         connect_sequence(builder, [START, "planner", END])

@@ -141,10 +141,12 @@ class AgentState(TypedDict):
 ```python
 def human_approval_node(state: AgentState) -> dict[str, Any]:
     # 挂起当前超步，图引擎将状态写入 Checkpoint，进程退出
-    decision = interrupt({
-        "question": f"核准高危操作: {state['pending_action']['name']}?",
-        "action": state["pending_action"],
-    })
+    decision = interrupt(
+        {
+            "question": f"核准高危操作: {state['pending_action']['name']}?",
+            "action": state["pending_action"],
+        }
+    )
     # 外部注入 Command(resume=...) 唤醒后继续执行下一行
     if decision.get("approved"):
         return {"approval_status": "approved"}

@@ -115,6 +115,7 @@ fork_config = manager.build_time_travel_config(
 
 # 3. 基于历史快照更新参数并执行分叉分支
 from langgraph.types import Command
+
 fork_result = compiled_graph.invoke(
     Command(update={"messages": [HumanMessage("修正后的新问题")]}),
     config=fork_config,

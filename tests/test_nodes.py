@@ -199,3 +199,56 @@ def test_error_boundary_isolates_unhandled_exception() -> None:
     assert len(delta["messages"]) == 1
     assert "节点 [faulty_node] 执行异常: 网络超时断连" in delta["messages"][0].content
     assert delta["metadata"]["failed_node"] == "faulty_node"
+
+
+def test_tool_executor_adaptive_arg_dispatch() -> None:
+    """验证 Tool Executor 参数自适应调度（无参容错、参数过滤与单参数位置回退）"""
+
+    def no_param_tool() -> str:
+        return "system_ready"
+
+    def strict_param_tool(filename: str) -> str:
+        return f"read:{filename}"
+
+    def single_arg_tool(value: int) -> int:
+        return value * 2
+
+    tool_node = create_tool_node(
+        tools={
+            "no_param": no_param_tool,
+            "strict_param": strict_param_tool,
+            "single_arg": single_arg_tool,
+        }
+    )
+
+    ai_msg = AIMessage(
+        content="",
+        tool_calls=[
+            # 1. 无参工具，但模型幻觉附带多余参数
+            {"name": "no_param", "args": {"dummy": "extra"}, "id": "c1"},
+            # 2. 严格参数工具，模型附带非法参数
+            {
+                "name": "strict_param",
+                "args": {"filename": "data.csv", "format": "table"},
+                "id": "c2",
+            },
+            # 3. 单参数工具，键名与形参不一致
+            {"name": "single_arg", "args": {"target_num": 21}, "id": "c3"},
+        ],
+    )
+    state: AgentState = {
+        "messages": [ai_msg],
+        "task_goal": "",
+        "plan": None,
+        "pending_action": None,
+        "approval_status": None,
+        "scratchpad": [],
+        "branch_results": {},
+        "metadata": {},
+    }
+
+    delta = tool_node(state)
+    assert len(delta["messages"]) == 3
+    assert delta["messages"][0].content == "system_ready"
+    assert delta["messages"][1].content == "read:data.csv"
+    assert delta["messages"][2].content == "42"

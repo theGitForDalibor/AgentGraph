@@ -69,15 +69,31 @@ def create_tool_node(
             tool_func = tool_map[tool_name]
             try:
                 if isinstance(tool_args, dict):
-                    # 判断签名传参
+                    # 反射自省函数签名并进行自适应参数适配
                     sig = inspect.signature(tool_func)
-                    if any(
-                        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-                    ) or all(k in sig.parameters for k in tool_args):
+                    params = sig.parameters
+                    has_var_kw = any(
+                        p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+                    )
+
+                    if len(params) == 0:
+                        # 1. 目标函数无参：即使模型携带冗余参数，也安全无参调用
+                        res = tool_func()
+                    elif has_var_kw or all(k in params for k in tool_args):
+                        # 2. 包含 **kwargs 或参数键名完全匹配：直接关键字传参
                         res = tool_func(**tool_args)
                     else:
-                        # 兼容无参或位置参数
-                        res = tool_func(**tool_args)
+                        # 3. 存在参数名不匹配或模型幻觉附带多余参数时的容错降级
+                        filtered_args = {k: v for k, v in tool_args.items() if k in params}
+                        if filtered_args:
+                            # 过滤掉模型幻觉生成的非法参数，仅传递函数实际支持的参数
+                            res = tool_func(**filtered_args)
+                        elif len(params) == 1 and len(tool_args) == 1:
+                            # 兼容单参数场景下的键名偏差（按位置传参）
+                            res = tool_func(next(iter(tool_args.values())))
+                        else:
+                            # 兜底直接解包，交由外层 try-except 捕获标准异常
+                            res = tool_func(**tool_args)
                 else:
                     res = tool_func(tool_args)
 

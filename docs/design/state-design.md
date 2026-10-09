@@ -52,9 +52,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 
-def append_reducer(
-    existing: list[Any] | None, update: Any | list[Any] | None
-) -> list[Any]:
+def append_reducer(existing: list[Any] | None, update: Any | list[Any] | None) -> list[Any]:
     """自定义追加规约器：支持元素单体或列表追加。"""
     existing_list = list(existing) if existing else []
     if update is None:
@@ -148,6 +146,7 @@ class AgentState(TypedDict):
 1. **物理删除 (RemoveMessage)**:
    ```python
    from langchain_core.messages import RemoveMessage
+
    return {"messages": [RemoveMessage(id="msg_old_id")]}
    ```
 2. **摘要折叠 (Summarization Node)**:

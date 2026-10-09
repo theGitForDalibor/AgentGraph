@@ -45,8 +45,8 @@ def build_react_agent_graph(
     builder = create_agent_graph_builder(AgentState)
 
     # 1. 注册原子节点
-    builder.add_node("planner", planner_node)  # type: ignore[call-overload]
-    builder.add_node("tool_executor", tool_node)  # type: ignore[call-overload]
+    builder.add_node("planner", planner_node)  # type: ignore
+    builder.add_node("tool_executor", tool_node)  # type: ignore
 
     # 2. 初始入口连线: START -> planner
     builder.add_edge(START, "planner")

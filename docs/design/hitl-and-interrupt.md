@@ -89,7 +89,7 @@ def create_human_approval_node(
                     "approval_status": "approved",
                     "scratchpad": [f"操作 [{tool_name}] 已由人工审核核准通过。"],
                 }
-            
+
             # 驳回分支
             return {
                 "approval_status": "rejected",
@@ -105,10 +105,12 @@ def create_human_approval_node(
 源码位置: `cli/tools.py`
 ```python
 # 默认声明的高危操作清单
-CLI_SENSITIVE_TOOLS: frozenset[str] = frozenset({
-    "danger_delete_file",
-    "execute_shell",
-})
+CLI_SENSITIVE_TOOLS: frozenset[str] = frozenset(
+    {
+        "danger_delete_file",
+        "execute_shell",
+    }
+)
 ```
 
 ---
