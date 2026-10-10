@@ -7,7 +7,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-purple.svg)](https://github.com/langchain-ai/langgraph)
 [![uv](https://img.shields.io/badge/package%20manager-uv-green.svg)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-56%20passed-brightgreen.svg)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-64%20passed-brightgreen.svg)](tests/)
 
 [ 简体中文 ](README.md) | [ English ](README.en.md)
 
@@ -266,10 +266,9 @@ The engineering roadmap is partitioned into four major versions across ten progr
 - [x] **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
 - [x] **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
 - [x] **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
+- [x] **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
 - [x] **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, and zero-key offline demo model.
 
 ### Planned (Detailed Designs Completed)
-- [ ] **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
 - [ ] **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
-- [ ] **MCP Client**: Standardized Model Context Protocol (MCP) tool integration.
-- [ ] **Web API Service**: FastAPI-based asynchronous streaming event gateway.
+

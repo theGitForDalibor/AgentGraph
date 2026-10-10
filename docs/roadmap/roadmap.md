@@ -1,7 +1,7 @@
 # AgentGraph 工程演进路线图 (Roadmap)
 
-> **当前阶段**: **V2 运行时编排与持久化已就绪 (Phase 0 ~ Phase 8 + CLI Completed)**  
-> **下一目标**: **V3 高阶图与多智能体拓扑 (Phase 9 Subgraph & Phase 10 Parallel Branch)**
+> **当前阶段**: **V3 高阶图分层多智能体已就绪 (Phase 0 ~ Phase 9 + CLI Completed)**  
+> **下一目标**: **Phase 10: Parallel Branch (扇出扇入无锁并发编排)**
 
 ---
 
@@ -29,9 +29,9 @@ flowchart TD
         P8 --> CLI["Application Layer: Terminal CLI"]
     end
 
-    subgraph V3["V3 Advanced Graph (复杂多智能体与并行 - 规划中)"]
-        CLI --> P9["Phase 9: Subgraph (分层多智能体)"]
-        P9 --> P10["Phase 10: Parallel Branch (扇出扇入并发)"]
+    subgraph V3["V3 Advanced Graph (复杂多智能体与并行)"]
+        CLI --> P9["Phase 9: Subgraph (分层多智能体 - 已完成)"]
+        P9 --> P10["Phase 10: Parallel Branch (扇出扇入并发 - 规划中)"]
     end
 ```
 
@@ -153,23 +153,20 @@ flowchart TD
 
 ---
 
-### 2.4 V3 Advanced Graph (复杂多智能体与并行 - 规划中)
+### 2.4 V3 Advanced Graph (复杂多智能体与并行)
 
 #### Phase 9: Subgraph (分层多智能体与子图隔离)
-- **状态**: **Planned (计划中)**
+- **状态**: **Completed (已完成)**
 - **核心目标**: 掌握子图（Subgraph）模式，实现分层多智能体编排（Hierarchical Multi-Agent）与复杂流程模块化黑盒封装。
-- **计划交付物**:
+- **交付物**:
   - `graph/subgraphs/researcher.py`: 具备独立内部状态空间与探索循环的 Researcher 调研子图。
-  - `graph/subgraphs/coder.py`: 专职代码生成的独立 Coder 子图。
+  - `graph/subgraphs/coder.py`: 专职代码生成与自测自修复的独立 Coder 子图。
+  - `graph/subgraphs/__init__.py`: 子图状态模型与构建工厂统一导出。
   - `graph/parent_graph.py`: 主图主管（Supervisor / Orchestrator）调用并协同子图。
-  - `tests/test_subgraph.py`: 父子图状态映射、命名空间隔离与联动集成测试。
-- **学习与架构关注点**:
-  - 子图如何作为一个普通节点（Node）嵌入父图。
-  - 父图 State 与子图 State 的模式隔离、转换与结果规约传递。
-  - 子图专属 Checkpoint 作用域与中断冒泡行为。
-- **质量门禁预期**:
-  - 子图内部状态高频变动不对外污染父图上下文。
-  - 父图能清晰观测到子图的完整执行周期。
+  - `tests/test_subgraph.py`: 父子图状态映射、命名空间隔离与联动集成测试 (7 项测试全绿)。
+- **质量门禁**:
+  - 子图内部高频状态变动 (queries, documents, drafts) 严禁污染父图消息上下文。[PASS]
+  - 父图 Supervisor 自动串联调研与编码子图，并在检查点中正常持久化全态快照。[PASS]
 
 #### Phase 10: Parallel Branch (扇出扇入并发编排)
 - **状态**: **Planned (计划中)**
@@ -201,5 +198,5 @@ flowchart TD
 | **Phase 7** | V2 Runtime Orchestration | Interrupt / Resume / HITL | **Completed** | `tests/test_interrupt_resume.py` (4 tests) |
 | **Phase 8** | V2 Runtime Orchestration | Checkpointer / Time Travel | **Completed** | `tests/test_checkpoint.py` (4 tests) |
 | **CLI** | Application Layer | Terminal REPL / Tasks / Sessions | **Completed** | `tests/test_cli.py` (12 tests) |
-| **Phase 9** | V3 Advanced Graph | Subgraph / Multi-Agent | **Planned** | `tests/test_subgraph.py` (待建) |
+| **Phase 9** | V3 Advanced Graph | Subgraph / Multi-Agent | **Completed** | `tests/test_subgraph.py` (7 tests) |
 | **Phase 10** | V3 Advanced Graph | Fan-out / Fan-in / Parallel Reducer | **Planned** | `tests/test_parallel_branch.py` (待建) |

@@ -7,7 +7,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-purple.svg)](https://github.com/langchain-ai/langgraph)
 [![uv](https://img.shields.io/badge/package%20manager-uv-green.svg)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-56%20passed-brightgreen.svg)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-64%20passed-brightgreen.svg)](tests/)
 
 [ 简体中文 ](README.md) | [ English ](README.en.md)
 
@@ -266,10 +266,9 @@ AgentGraph 将智能体系统的图化重构严格划分为四大版本与十个
 - [x] **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
 - [x] **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
 - [x] **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
+- [x] **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
 - [x] **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演与离线 Demo 规则模型。
 
 ### Planned (计划中 - 设计已就绪)
-- [ ] **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
 - [ ] **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
-- [ ] **MCP Client**: 对接 Model Context Protocol (MCP) 分布式工具集成。
-- [ ] **Web API Service**: 基于 FastAPI 的异步流式事件（Streaming）推送接口。
+
