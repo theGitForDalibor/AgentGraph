@@ -257,16 +257,16 @@ docs/
 The engineering roadmap is partitioned into four major versions across ten progressive phases:
 
 ### Completed
-- [x] **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
-- [x] **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
-- [x] **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
-- [x] **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
-- [x] **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
-- [x] **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
-- [x] **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
-- [x] **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
-- [x] **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
-- [x] **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
-- [x] **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
-- [x] **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, and zero-key offline demo model.
+- ✅ **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
+- ✅ **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
+- ✅ **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
+- ✅ **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
+- ✅ **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
+- ✅ **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
+- ✅ **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
+- ✅ **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
+- ✅ **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
+- ✅ **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
+- ✅ **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
+- ✅ **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, and zero-key offline demo model.
 

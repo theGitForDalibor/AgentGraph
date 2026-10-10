@@ -257,16 +257,16 @@ docs/
 AgentGraph 将智能体系统的图化重构严格划分为四大版本与十个渐进阶段：
 
 ### Completed (已完成)
-- [x] **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
-- [x] **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
-- [x] **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
-- [x] **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
-- [x] **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
-- [x] **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
-- [x] **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
-- [x] **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
-- [x] **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
-- [x] **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
-- [x] **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
-- [x] **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演与离线 Demo 规则模型。
+- ✅ **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
+- ✅ **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
+- ✅ **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
+- ✅ **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
+- ✅ **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
+- ✅ **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
+- ✅ **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
+- ✅ **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
+- ✅ **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
+- ✅ **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
+- ✅ **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
+- ✅ **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演与离线 Demo 规则模型。
 
