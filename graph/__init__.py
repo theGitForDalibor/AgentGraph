@@ -2,7 +2,7 @@
 Jarvis Agent Pro - 图拓扑组装与编排层 (StateGraph Layer)
 
 负责声明有向图拓扑、静态边 (Static Edge)、条件边 (Conditional Edge)、
-路由分发 (Router)、子图模式 (Subgraph) 以及图生命周期编译 (Compile)。
+路由分发 (Router)、子图模式 (Subgraph)、并发分支 (Parallel Branch) 以及图生命周期编译 (Compile)。
 """
 
 from langgraph.graph import END, START
@@ -18,6 +18,10 @@ from graph.edges import (
     export_mermaid_diagram,
 )
 from graph.hitl_graph import build_hitl_agent_graph
+from graph.parallel_graph import (
+    build_code_review_parallel_graph,
+    build_parallel_branch_graph,
+)
 from graph.parent_graph import (
     ROUTER_CODE,
     ROUTER_RESEARCH,
@@ -45,10 +49,12 @@ __all__ = [
     "ResearcherState",
     "START",
     "__version__",
+    "build_code_review_parallel_graph",
     "build_coder_subgraph",
     "build_hierarchical_parent_graph",
     "build_hitl_agent_graph",
     "build_linear_agent_graph",
+    "build_parallel_branch_graph",
     "build_react_agent_graph",
     "build_researcher_subgraph",
     "compile_agent_graph",

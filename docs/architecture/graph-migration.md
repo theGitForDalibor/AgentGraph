@@ -19,7 +19,7 @@
 | **6** | `Memory` (消息追加列表/向量摘要) | `Checkpoint` (全系统时空状态快照) | 扁平文本记录 ➔ 多维时空回溯与分叉 | **Implemented** |
 | **7** | `Tool Execution` (运行时内联调用) | `Tool Node` (解耦的观察者节点) | 混杂副作用 ➔ 声明式工具反馈环 | **Implemented** |
 | **8** | `Sub-Agent Delegation` (子运行时递归) | `Subgraph` (嵌套图/黑盒节点) | 复杂堆栈传递 ➔ 图的嵌套组装与模式隔离 | **Implemented** |
-| **9** | `Parallel Execution` (`asyncio.gather`) | `Parallel Branch` (扇出与扇入聚合) | 手工并发锁与合并 ➔ 拓扑级原生无锁确定性并发 | **Planned (Phase 10)** |
+| **9** | `Parallel Execution` (`asyncio.gather`) | `Parallel Branch` (扇出与扇入聚合) | 手工并发锁与合并 ➔ 拓扑级原生无锁确定性并发 | **Implemented** |
 | **10**| `Context Trimming` (全局手动清理) | `State Reducers` (增量式修剪与过滤) | 易错破坏全局 ➔ 精准字段级生命周期规约 | **Partially Implemented** |
 
 ---

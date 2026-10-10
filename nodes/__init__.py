@@ -6,6 +6,11 @@ Jarvis Agent Pro - 节点计算层 (Nodes Layer)
 核心节点包括：Planner Node、Tool Node、Approval Node、Aggregator Node。
 """
 
+from nodes.aggregators import (
+    create_dict_aggregator_node,
+    create_summary_aggregator_node,
+    default_report_formatter,
+)
 from nodes.base import NodeFunction, with_error_boundary
 from nodes.human_approval import DEFAULT_SENSITIVE_TOOLS, create_human_approval_node
 from nodes.planner import create_planner_node
@@ -16,8 +21,11 @@ __all__ = [
     "DEFAULT_SENSITIVE_TOOLS",
     "NodeFunction",
     "__version__",
+    "create_dict_aggregator_node",
     "create_human_approval_node",
     "create_planner_node",
+    "create_summary_aggregator_node",
     "create_tool_node",
+    "default_report_formatter",
     "with_error_boundary",
 ]
