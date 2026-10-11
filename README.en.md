@@ -7,7 +7,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-purple.svg)](https://github.com/langchain-ai/langgraph)
 [![uv](https://img.shields.io/badge/package%20manager-uv-green.svg)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-71%20passed-brightgreen.svg)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-76%20passed-brightgreen.svg)](tests/)
 
 [ 简体中文 ](README.md) | [ English ](README.en.md)
 
@@ -24,26 +24,32 @@ Traditional autonomous agents typically rely on an imperative loop to drive agen
 2. **Shared Mutable State**: In-place mutation of shared context dictionaries leads to race conditions and dirty writes during asynchronous or parallel execution.
 3. **Blocking Human-in-the-Loop (HITL)**: Synchronous `input()` or thread-blocking polling monopolizes compute resources; server restarts or container migrations drop pending human approval requests permanently.
 4. **Absence of Spatiotemporal Snapshots**: Flat chat histories preserve only conversational text, losing step-by-step intermediate variables, reasoning thoughts, and time-travel debugging capabilities.
+5. **Coupled Multi-Role Collaboration**: Difficulty in modularizing expert agent roles into black-box subgraphs with isolated state lifecycles.
+6. **Non-deterministic Concurrency**: Parallel branch executions frequently cause write conflicts and non-deterministic state merges.
 
-AgentGraph resolves these challenges by adhering to a strict design philosophy: **State-centricity, Atomic Pure Nodes, Decoupled Topology, and Stateless Suspension**.
+AgentGraph resolves these challenges by adhering to a strict design philosophy: **State-centricity, Atomic Pure Nodes, Decoupled Topology, Stateless Suspension, Black-Box Subgraphs, and Deterministic Concurrency**.
 
 ---
 
 ## 2. Implemented Features
 
-> **Note**: In strict accordance with engineering discipline, only fully implemented and test-verified capabilities (56 unit and integration tests passing) are listed below. For upcoming features, see [Roadmap](#10-roadmap).
+> **Current Status**: All ten architectural evolution phases are **100% completed**, verified by 76 unit and integration tests (100% PASS).
 
 - **Declarative StateGraph Orchestration**: Strongly typed state schemas based on `TypedDict` and functional reducers (`add_messages`, `append_reducer`, `merge_dict_reducer`) that guarantee atomic incremental delta merging.
-- **Pure-Function Stateless Nodes**: Planner node (`planner`), tool execution node (`tool_executor`), and human approval node (`human_approval`) wrapped in `with_error_boundary` exception barriers.
+- **Pure-Function Stateless Nodes**: Planner node (`planner`), tool execution node (`tool_executor`), human approval node (`human_approval`), and parallel aggregator nodes (`aggregators`) wrapped in `with_error_boundary` exception barriers.
 - **Adaptive ReAct Closed-Loop Routing**: Declarative conditional edges supporting dynamic tool-call loops, direct answers, and recursion limit fuses to prevent infinite loops.
 - **Stateless Human-in-the-Loop (HITL)**: Leverages native LangGraph 0.2 `interrupt()` to suspend execution upon encountering sensitive tools (e.g., file deletion, shell execution). The execution context is frozen to SQLite, and can be resumed or rejected via external `Command(resume=...)` without holding open threads.
 - **SQLite Checkpoint & Time Travel**: Automatic state persistence at each superstep boundary, providing tenant session isolation via `thread_id` and parallel branch forking from historical checkpoints.
+- **Hierarchical Multi-Agent Subgraphs (Phase 9 Subgraph)**: Supervisor master graph orchestrates specialized domain subgraphs (`Researcher` subgraph for background exploration, `Coder` subgraph for code generation and self-testing), ensuring black-box component isolation.
+- **Fan-Out / Fan-In Parallel Branches (Phase 10 Parallel Branch)**: Single-superstep topology-level fan-out dispatching to multiple asynchronous nodes concurrently (e.g., concurrent code security, performance complexity, and PEP8 style auditing), with deterministic weighted merging via `merge_dict_reducer` at the fan-in aggregator.
 - **Production Terminal CLI**:
-  - `jarvis chat`: Interactive multi-turn REPL with streaming-like Rich status cards.
+  - `jarvis chat`: Interactive multi-turn REPL supporting `--mode standard|hierarchical|review`.
   - `jarvis run`: Single-task execution with `--quiet` mode and `--yes` non-interactive auto-approval.
+  - `jarvis supervise`: [Phase 9] One-click command to launch hierarchical multi-agent collaboration.
+  - `jarvis review`: [Phase 10] One-click command to launch multi-dimensional concurrent code quality reviews (supports code snippets and file paths).
   - `jarvis sessions`: Inspect historical checkpoint snapshots stored in SQLite.
 - **Dual-Model LLM Adapter**:
-  - **Zero-Key Offline Demo Model**: Built-in deterministic `DemoModel` for instant evaluation of ReAct reasoning, tool calls, and HITL approval without network access or API keys.
+  - **Zero-Key Offline Demo Model**: Built-in deterministic `DemoModel` for instant evaluation of ReAct reasoning, tool calls, HITL approval, multi-agent collaboration, and parallel code review without network access or API keys.
   - **Universal OpenAI-Compatible Client**: Asynchronous `httpx`-based client compatible with DeepSeek, OpenAI, Ollama, and vLLM.
 
 ---
@@ -56,11 +62,19 @@ AgentGraph enforces a layered, decoupled architecture with strict responsibility
 flowchart TD
     User([User / API Client]) <--> App[Application Layer: Terminal CLI]
     
-    subgraph Engine["AgentGraph Core Engine"]
-        App <--> Router{Conditional Edge Router}
-        Router <--> Planner[Planner Node]
-        Router <--> Tool[Tool Executor Node]
-        Router <--> Approval[Human Approval Node]
+    subgraph Engine["AgentGraph Core Orchestration Engine"]
+        App <--> Router{Topology Router & Dispatcher}
+        Router <--> CoreGraph[ReAct & HITL StateGraph]
+        Router <--> HierarchicalGraph[Hierarchical Multi-Agent Supervisor Graph]
+        Router <--> ParallelGraph[Fan-Out / Fan-In Parallel Review Graph]
+        
+        HierarchicalGraph -.-> SubResearcher[Researcher Subgraph]
+        HierarchicalGraph -.-> SubCoder[Coder Subgraph]
+        
+        ParallelGraph -. Fan-out .-> SecNode[Security Audit Node]
+        ParallelGraph -. Fan-out .-> PerfNode[Performance Analysis Node]
+        ParallelGraph -. Fan-out .-> StyleNode[Style Compliance Node]
+        SecNode & PerfNode & StyleNode -. Fan-in .-> Aggregator[Weighted Decision Aggregator]
     end
 
     subgraph StateManagement["State & Persistence Foundation"]
@@ -68,11 +82,11 @@ flowchart TD
         Engine <--> Checkpointer[(SqliteSaver: Checkpoint Snapshots)]
     end
 
-    Tool --> ExtTools[Local Safe Tools / Sensitive Tool Registry]
-    Planner --> ModelAdapter[LLM Adapter: DemoModel / OpenAI Compatible]
+    CoreGraph --> ExtTools[Local Safe Tools / Sensitive Tool Registry]
+    Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI Compatible]
 ```
 
-### End-to-End Execution Sequence
+### End-to-End Execution Sequence (HITL Approval Example)
 
 ```mermaid
 sequenceDiagram
@@ -112,11 +126,13 @@ sequenceDiagram
 | Concept | Definition & Responsibility in AgentGraph |
 | :--- | :--- |
 | **AgentState** | The Single Source of Truth for the entire graph. Strongly typed, serving as the sole communication medium between nodes. |
-| **Reducer** | Functional merger for state fields (e.g., `add_messages` for idempotent message upsert/deletion, `append_reducer` for cumulative thoughts). |
+| **Reducer** | Functional merger for state fields (e.g., `add_messages` for message upsert/deletion, `append_reducer` for thoughts, `merge_dict_reducer` for concurrent merges). |
 | **Node** | Pure callable calculation unit. Accepts an immutable state snapshot and yields a partial delta dictionary (`dict[str, Any]`), with no side effects. |
 | **Edge / Router** | Static edges dictate deterministic transitions; conditional edges inspect state dynamically to determine next destinations. |
 | **Interrupt** | Stateless execution suspension. On sensitive operations, the graph commits state to disk and yields control, awakened via `Command`. |
 | **Checkpoint** | Superstep-level system snapshot. Stored in SQLite as a DAG version tree, enabling session isolation and time-travel debugging. |
+| **Subgraph** | Black-box graph component with isolated state schema and execution lifecycle, embedded as a node inside a parent graph. |
+| **Parallel Branch** | Topology-level fan-out and fan-in, dispatching parallel execution within a single superstep and merging results deterministically. |
 
 ---
 
@@ -124,15 +140,16 @@ sequenceDiagram
 
 ```text
 AgentGraph/
-├── cli/                 # Application layer (Typer REPL session, task runner, and Rich UI)
-├── graph/               # Graph topology layer (StateGraph builders, edges, router, ReAct and HITL graphs)
-├── nodes/               # Pure calculation nodes (Planner, Tool Executor, Human Approval)
+├── cli/                 # Application layer (chat, run, supervise, review, sessions)
+├── graph/               # Graph topology layer (ReAct, HITL, Supervisor, Parallel review graphs)
+│   └── subgraphs/       # Domain subgraphs (Researcher subgraph, Coder subgraph)
+├── nodes/               # Pure calculation nodes (Planner, Tool, Approval, Aggregators)
 ├── state/               # State model & reducers (AgentState schema, append_reducer, merge_dict)
 ├── tools/               # Tool execution layer (Builtin tools and sensitive tool registry)
 ├── checkpoints/         # Persistence layer (SQLite/Memory saver factory and CheckpointManager)
 ├── docs/                # Comprehensive documentation hub (Architecture, Design, Dev, ADR, Roadmap)
 ├── scripts/             # Infrastructure and quality gate scripts (check.py)
-├── tests/               # Test suite with 56 unit and integration tests (100% passing)
+├── tests/               # Complete test suite with 76 unit and integration tests (100% passing)
 └── pyproject.toml       # Build configuration, dependency specs, and toolchain rules
 ```
 
@@ -154,7 +171,7 @@ cd AgentGraph
 uv sync
 ```
 
-### 6.3 30-Second Quick Start (Zero-Key Offline Demo Mode)
+### 6.3 Quick Start (Zero-Key Offline Demo Mode)
 
 Explore full autonomous agent capabilities without requiring external network connectivity or API keys:
 
@@ -168,7 +185,13 @@ uv run jarvis run "Please calculate 25 * 40 + 150" --demo
 # 3. Test Human-in-the-Loop (HITL) sensitive action interception
 uv run jarvis run "Delete app.log" --demo
 
-# 4. View historical session snapshots saved in SQLite
+# 4. [Phase 9] Experience hierarchical multi-agent collaboration (Supervisor + Researcher + Coder)
+uv run jarvis supervise "Implement a quicksort algorithm" --demo
+
+# 5. [Phase 10] Experience multi-dimensional concurrent code review (Security + Performance + Style)
+uv run jarvis review "def add(a, b): return a + b"
+
+# 6. View historical session snapshots saved in SQLite
 uv run jarvis sessions
 ```
 
@@ -192,7 +215,7 @@ uv run jarvis chat
 ```bash
 uv run pytest
 ```
-*All 56 unit and integration test cases pass in under two seconds.*
+*All 76 unit and integration test cases pass in under two seconds.*
 
 ---
 
@@ -220,7 +243,7 @@ uv run python scripts/check.py
 uv run ruff check .          # Lint check
 uv run ruff format --check . # Code formatting check
 uv run mypy .                # Strict type checking
-uv run pytest -v             # Full unit and integration tests
+uv run pytest -v             # Full unit and integration tests (76 tests)
 ```
 
 ---
@@ -240,33 +263,37 @@ docs/
 │   └── checkpoint-and-timetravel.md  # SQLite checkpointer, session isolation, and time-travel forking
 ├── development/                      # Developer Guides
 │   ├── engineering-guide.md          # Technology selection rationale, standards, and quality gates
-│   └── cli-reference.md              # CLI reference manual (chat, run, sessions, version)
+│   └── cli-reference.md              # CLI reference manual (including supervise and review commands)
 ├── adr/                              # Architecture Decision Records
 │   ├── README.md                     # ADR index and authoring guidelines
 │   ├── ADR-001-why-langgraph.md      # ADR-001: Why LangGraph was chosen
 │   ├── ADR-002-stategraph-first.md   # ADR-002: Why start from low-level StateGraph primitives
 │   └── ADR-003-loop-to-graph.md      # ADR-003: Why evolve Runtime Loop into Graph Orchestration
 └── roadmap/                          # Engineering Roadmap
-    └── roadmap.md                    # 10-phase roadmap details (Completed & Planned)
+    └── roadmap.md                    # 10-phase roadmap details (All phases completed)
 ```
 
 ---
 
 ## 10. Roadmap
 
-The engineering roadmap is partitioned into four major versions across ten progressive phases:
+All ten progressive phases are **100% completed and test-verified**:
 
 ### Completed
-- ✅ **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
-- ✅ **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
-- ✅ **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
-- ✅ **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
-- ✅ **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
-- ✅ **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
-- ✅ **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
-- ✅ **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
-- ✅ **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
-- ✅ **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
-- ✅ **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
-- ✅ **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, and zero-key offline demo model.
+- [x] **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
+- [x] **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
+- [x] **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
+- [x] **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
+- [x] **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
+- [x] **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
+- [x] **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
+- [x] **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
+- [x] **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
+- [x] **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
+- [x] **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
+- [x] **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, multi-agent (`supervise`), and concurrent review (`review`).
 
+### Future & Extension Outlook
+- [ ] **MCP (Model Context Protocol) Client**: Standardized Model Context Protocol (MCP) tool integration.
+- [ ] **Web API & WebSocket Service**: FastAPI-based asynchronous streaming event gateway.
+- [ ] **Distributed Checkpoint Backend**: Cloud-native PostgresSaver and Redis cluster checkpointers.

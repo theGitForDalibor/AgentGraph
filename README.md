@@ -7,7 +7,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-purple.svg)](https://github.com/langchain-ai/langgraph)
 [![uv](https://img.shields.io/badge/package%20manager-uv-green.svg)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
-[![Tests: pytest](https://img.shields.io/badge/tests-71%20passed-brightgreen.svg)](tests/)
+[![Tests: pytest](https://img.shields.io/badge/tests-76%20passed-brightgreen.svg)](tests/)
 
 [ 简体中文 ](README.md) | [ English ](README.en.md)
 
@@ -24,26 +24,32 @@
 2. **状态共享与竞态**: 全局可变上下文在多模块或并发调用中频繁出现脏写覆盖。
 3. **阻塞式人机审批**: 同步 `input()` 阻塞独占计算线程，服务重启或容器漂移导致挂起任务全量丢失。
 4. **缺乏时空状态快照**: 无法精确回溯至智能体思考的任意历史微步进行故障排查与分叉推演（Time Travel）。
+5. **多角色协同耦合**: 无法天然将专家角色解耦为具备独立状态生命周期的组件化子图。
+6. **并发难以确定性规约**: 多任务并行执行时容易引发并发竞态与不可预测的状态合并冲突。
 
-AgentGraph 通过严格遵循“以状态为核心、节点原子化、连线拓扑化、审批无状态化”的设计哲学，为企业级可靠智能体提供坚实可靠的底层架构底座。
+AgentGraph 严格遵循“以状态为核心、节点原子化、连线拓扑化、审批无状态化、子图黑盒化、并发确定性”的设计哲学，为企业级可靠智能体提供坚实的架构底座。
 
 ---
 
 ## 2. Implemented Features (已实现核心能力)
 
-> 提示：本项目严格遵守工程纪律，以下仅列出当前代码库已完全落地并通过 56 项测试验证的能力。计划中特性请参见 [Roadmap](#10-roadmap)。
+> **当前状态**: 本项目十阶段架构演进已**全部开发完成**，并通过 76 项单元与集成测试验证（100% PASS）。
 
 - **声明式 StateGraph 拓扑编排**: 基于强类型 `TypedDict` 定义统一状态，使用函数式规约器（`add_messages`、`append_reducer`、`merge_dict_reducer`）保障并发合并的原子性。
-- **纯函数无状态计算节点**: 规划器（`planner`）、工具执行器（`tool_executor`）与人机核准节点（`human_approval`）完全无状态化，外置 `with_error_boundary` 异常隔离屏障。
+- **纯函数无状态计算节点**: 规划器（`planner`）、工具执行器（`tool_executor`）、人机核准节点（`human_approval`）及并发汇聚节点（`aggregators`）完全无状态化，外置 `with_error_boundary` 异常隔离屏障。
 - **ReAct 动态自适应闭环**: 声明式条件路由（Conditional Edge），支持意图决策、工具调用回环推演以及最大递归深度（Recursion Limit）熔断防死循环。
 - **无状态人机协同 (Stateless HITL)**: 依赖 LangGraph 原生 `interrupt()` 挂起敏感高危操作（如删除、Shell 指令），进程完全释放并持久化冻结；通过 `Command(resume=...)` 外部指令无损复苏或驳回重规。
-- **SQLite 状态检查点与时空快照**: 全系统状态在每个超步（Superstep）自动持久化至 SQLite，天然支持多会话隔离（`thread_id`）与时间旅行（Time Travel）历史追溯。
-- **开箱即用终端命令行客户端 (CLI)**:
-  - `jarvis chat`: 交互式 REPL 多轮终端对话，自带 Rich 格式化流式卡片。
-  - `jarvis run`: 单次指令即时推演，支持 `--quiet` 静默模式与 `--yes` 非交互式自动核准。
+- **SQLite 状态检查点与时空快照**: 全系统状态在每个超步（Superstep）自动持久化至 SQLite，天然支持多会话隔离（`thread_id`）与时间旅行（Time Travel）历史追溯与分支分叉。
+- **分层多智能体子图编排 (Phase 9 Subgraph)**: Supervisor 主图协调调度专职领域子图（`Researcher` 知识调研子图、`Coder` 代码研发与自测修复子图），实现子图内部状态与生命周期的黑盒组件化隔离。
+- **扇出扇入并发分支编排 (Phase 10 Parallel Branch)**: 单超步拓扑级扇出并发分发（Fan-out），多节点异步并发执行（支持代码安全、运行性能、PEP8 风格多维度并行审查），并在扇入（Fan-in）汇聚节点通过 `merge_dict_reducer` 完成确定性加权聚合。
+- **全功能终端命令行客户端 (CLI)**:
+  - `jarvis chat`: 交互式终端 REPL 多轮会话（支持 `--mode standard|hierarchical|review` 切换引擎模式）。
+  - `jarvis run`: 单次任务即时推演，支持 `--quiet` 静默模式与 `--yes` 非交互式自动核准。
+  - `jarvis supervise`: [Phase 9] 一键启动分层多智能体协同研发任务。
+  - `jarvis review`: [Phase 10] 一键启动多维度代码并发质量审查（支持代码片段与源文件路径）。
   - `jarvis sessions`: 查看保存在 SQLite 中的历史会话快照清单。
 - **双模大模型适配**:
-  - **离线确定性 Demo 模式**: 内置 `DemoModel`，零 API Key、零外部网络即可完整体验 ReAct 推理、工具调用与 HITL 审批拦截。
+  - **离线确定性 Demo 模式**: 内置 `DemoModel`，零 API Key、零外部网络即可完整体验 ReAct 推理、工具调用、HITL 审批、多智能体协同与代码并发审查。
   - **通用 OpenAI 兼容协议**: 基于 `httpx` 直连 OpenAI、DeepSeek、Ollama、vLLM 等主流端点。
 
 ---
@@ -56,11 +62,19 @@ AgentGraph 采用严格的分层解耦架构，从上层终端接口到底层存
 flowchart TD
     User([终端用户 / API 客户端]) <--> App[Application Layer: CLI 命令行客户端]
     
-    subgraph Engine["AgentGraph 核心图引擎"]
-        App <--> Router{条件边路由决策}
-        Router <--> Planner[Planner 规划节点]
-        Router <--> Tool[Tool Executor 工具节点]
-        Router <--> Approval[Human Approval 核准节点]
+    subgraph Engine["AgentGraph 核心图编排引擎"]
+        App <--> Router{拓扑路由与调度}
+        Router <--> CoreGraph[ReAct & HITL 核心状态图]
+        Router <--> HierarchicalGraph[分层多智能体 Supervisor 主图]
+        Router <--> ParallelGraph[扇出扇入并发审查图]
+        
+        HierarchicalGraph -.-> SubResearcher[Researcher 子图]
+        HierarchicalGraph -.-> SubCoder[Coder 子图]
+        
+        ParallelGraph -. 扇出并发 .-> SecNode[安全审计节点]
+        ParallelGraph -. 扇出并发 .-> PerfNode[性能分析节点]
+        ParallelGraph -. 扇出并发 .-> StyleNode[代码风格节点]
+        SecNode & PerfNode & StyleNode -. 扇入汇聚 .-> Aggregator[加权决议汇聚节点]
     end
 
     subgraph StateManagement["状态管理与存储底座"]
@@ -68,11 +82,11 @@ flowchart TD
         Engine <--> Checkpointer[(SqliteSaver: 检查点快照存储)]
     end
 
-    Tool --> ExtTools[本地安全工具 / 敏感工具注册表]
-    Planner --> ModelAdapter[LLM Adapter: DemoModel / OpenAI 兼容协议]
+    CoreGraph --> ExtTools[本地安全工具 / 敏感工具注册表]
+    Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI 兼容协议]
 ```
 
-### 核心流转时序
+### 核心流转时序 (以人机核准为例)
 
 ```mermaid
 sequenceDiagram
@@ -112,11 +126,13 @@ sequenceDiagram
 | 核心概念 | 定义与在 AgentGraph 中的职责 |
 | :--- | :--- |
 | **AgentState** | 图的单一可信数据源（Single Source of Truth）。强类型定义，节点间传递数据的唯一介质。 |
-| **Reducer** | 状态字段的规约合并函数（如 `add_messages` 增量追加/覆盖更新，`append_reducer` 思考草稿累加）。 |
+| **Reducer** | 状态字段的规约合并函数（如 `add_messages` 增量追加/覆盖更新，`append_reducer` 思考累加，`merge_dict_reducer` 并发合并）。 |
 | **Node** | 无状态原子计算函数。只接收当前只读状态快照，只返回局部增量字典（Delta），无副作用。 |
 | **Edge / Router** | 静态边负责确定性流向；条件边负责读取最新状态动态计算分支目标（工具、人工审批或结束）。 |
 | **Interrupt** | 无状态中断挂起。发生敏感操作时图引擎保存快照并退出，由外部注入 `Command` 唤醒。 |
 | **Checkpoint** | 超步全态快照。在 SQLite 中保存状态版本树，支持多会话隔离与时间旅行（Time Travel）。 |
+| **Subgraph** | 具备独立状态空间与生命周期的黑盒图组件，作为普通节点嵌入父图，防止子任务细节污染主图上下文。 |
+| **Parallel Branch** | 拓扑级扇出（Fan-out）与扇入（Fan-in），在单一超步调度并发执行并在汇聚节点安全合并。 |
 
 ---
 
@@ -124,15 +140,16 @@ sequenceDiagram
 
 ```text
 AgentGraph/
-├── cli/                 # 终端应用程序层 (Typer 驱动的 REPL 会话、执行器与 Rich UI)
-├── graph/               # 声明式图拓扑层 (StateGraph 构建器、静态边、条件路由、ReAct 与 HITL 图)
-├── nodes/               # 原子计算节点层 (Planner 节点、Tool 节点、Human Approval 审批节点)
+├── cli/                 # 终端应用程序层 (chat, run, supervise, review, sessions)
+├── graph/               # 声明式图拓扑层 (ReAct 图、HITL 图、Supervisor 主图、并行审查图)
+│   └── subgraphs/       # 领域独立子图 (Researcher 调研子图、Coder 代码生成子图)
+├── nodes/               # 原子计算节点层 (Planner、Tool、Approval、Aggregators 汇聚节点)
 ├── state/               # 状态模型与规约层 (AgentState 契约、append_reducer、merge_dict)
 ├── tools/               # 工具执行层 (基础工具实现与敏感工具注册清单)
-├── checkpoints/         # 持久化存储层 (SQLite / 内存检查点适配工厂与 CheckpointManager)
+├── checkpoints/         # 持久化存储层 (SQLite / 内存检查点工厂与 CheckpointManager)
 ├── docs/                # 标准化技术文档库 (架构、设计、开发规范、ADR、演进路线)
 ├── scripts/             # 工程基础设施与自动化质量门禁 (check.py)
-├── tests/               # 完备的单元测试与集成测试套件 (56 项全覆盖测试)
+├── tests/               # 完备的测试套件 (76 项单元与集成测试，覆盖率 100% PASS)
 └── pyproject.toml       # 项目构建、依赖规范与工具链配置
 ```
 
@@ -154,9 +171,9 @@ cd AgentGraph
 uv sync
 ```
 
-### 6.3 30 秒快速体验 (零 Key 离线演示模式)
+### 6.3 快速体验 (零 Key 离线演示模式)
 
-无需配置任何 API Key 或外部网络，直接启动交互式体验：
+无需配置任何 API Key 或外部网络，直接体验全套智能体能力：
 
 ```bash
 # 1. 启动交互式终端 REPL 多轮对话
@@ -168,7 +185,13 @@ uv run jarvis run "帮我计算 25 * 40 + 150" --demo
 # 3. 体验人机协同 (HITL) 敏感操作审批拦截
 uv run jarvis run "帮我删除 app.log" --demo
 
-# 4. 查看持久化在 SQLite 中的历史会话快照
+# 4. [Phase 9] 体验分层多智能体协同 (Supervisor + Researcher + Coder)
+uv run jarvis supervise "开发一个快速排序算法" --demo
+
+# 5. [Phase 10] 体验多维度代码并发质量审查 (安全 + 性能 + 风格并发分析)
+uv run jarvis review "def add(a, b): return a + b"
+
+# 6. 查看持久化在 SQLite 中的历史会话快照
 uv run jarvis sessions
 ```
 
@@ -192,7 +215,7 @@ uv run jarvis chat
 ```bash
 uv run pytest
 ```
-*当前全量 56 项测试用例应当在毫秒级内全部通过（PASS）。*
+*当前全量 76 项测试用例应当在 2 秒内全部通过（PASS）。*
 
 ---
 
@@ -220,7 +243,7 @@ uv run python scripts/check.py
 uv run ruff check .          # 代码 Lint 校验
 uv run ruff format --check . # 格式化排版校验
 uv run mypy .                # 严格静态类型推导
-uv run pytest -v             # 单元与集成测试
+uv run pytest -v             # 单元与集成测试 (76 项测试)
 ```
 
 ---
@@ -240,7 +263,7 @@ docs/
 │   └── checkpoint-and-timetravel.md  # SQLite 持久化检查点与时间旅行机制
 ├── development/                      # 开发者指引
 │   ├── engineering-guide.md          # 技术选型论证、开发规范与质量门禁
-│   └── cli-reference.md              # 终端 CLI 命令行完整手册
+│   └── cli-reference.md              # 终端 CLI 命令行完整手册 (含 supervise / review)
 ├── adr/                              # 架构决策记录
 │   ├── README.md                     # ADR 总览与维护规范
 │   ├── ADR-001-why-langgraph.md      # ADR-001: 为什么迁移至 LangGraph
@@ -254,19 +277,23 @@ docs/
 
 ## 10. Roadmap (演进路线图)
 
-AgentGraph 将智能体系统的图化重构严格划分为四大版本与十个渐进阶段：
+AgentGraph 十个递进阶段已**全部开发完成并验证通过**：
 
-### Completed (已完成)
-- ✅ **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
-- ✅ **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
-- ✅ **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
-- ✅ **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
-- ✅ **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
-- ✅ **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
-- ✅ **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
-- ✅ **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
-- ✅ **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
-- ✅ **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
-- ✅ **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
-- ✅ **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演与离线 Demo 规则模型。
+### Completed (全部完成)
+- [x] **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
+- [x] **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
+- [x] **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
+- [x] **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
+- [x] **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
+- [x] **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
+- [x] **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
+- [x] **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
+- [x] **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
+- [x] **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
+- [x] **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
+- [x] **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演、多智能体协同 (`supervise`) 与并发审查 (`review`)。
 
+### Future & Extension Outlook (后续展望与生态扩展)
+- [ ] **MCP (Model Context Protocol) Client**: 对接标准 MCP 分布式工具集成协议。
+- [ ] **Web API & WebSocket Service**: 基于 FastAPI 的异步流式事件（Streaming）推送接口。
+- [ ] **Distributed Checkpoint Backend**: 面向云原生集群的 PostgresSaver / Redis 检查点后端适配。
