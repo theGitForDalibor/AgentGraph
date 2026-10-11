@@ -75,31 +75,34 @@ flowchart TD
             Supervisor[Supervisor Node] <--> Router
 
             subgraph ResearcherSubgraph["Researcher Subgraph (Private ResearcherState)"]
-                R_Plan[research_planner<br>Plan Search] --> R_Router{Sufficient Info?}
-                R_Router -- No --> R_Exec[search_executor<br>Knowledge Retrieval] --> R_Plan
-                R_Router -- Yes --> R_Summary[Synthesize Briefing]
+                R_Plan["research_planner<br>Plan Search"] --> R_Router{"Sufficient Info?"}
+                R_Router -->|No| R_Exec["search_executor<br>Knowledge Retrieval"]
+                R_Exec --> R_Plan
+                R_Router -->|Yes| R_Summary["Synthesize Briefing"]
             end
 
             subgraph CoderSubgraph["Coder Subgraph (Private CoderState)"]
-                C_Draft[coder_draft<br>Draft & Revise] --> C_Test[coder_test<br>AST Parse & Self-Test]
-                C_Test --> C_Router{Passed or Exceeded?}
-                C_Router -- Failed & Under Limit --> C_Draft
-                C_Router -- Passed/Exceeded --> C_Done[Produce Code Artifact]
+                C_Draft["coder_draft<br>Draft & Revise"] --> C_Test["coder_test<br>AST Parse & Self-Test"]
+                C_Test --> C_Router{"Passed or Exceeded?"}
+                C_Router -->|Failed & Under Limit| C_Draft
+                C_Router -->|Passed or Exceeded| C_Done["Produce Code Artifact"]
             end
 
             Supervisor -->|1. Dispatch Research| R_Plan
-            R_Summary -. 2. Deliver Briefing .-> Supervisor
+            R_Summary -.->|2. Deliver Briefing| Supervisor
             Supervisor -->|3. Dispatch Coding| C_Draft
-            C_Done -. 4. Deliver Code Artifact .-> Supervisor
+            C_Done -.->|4. Deliver Code Artifact| Supervisor
             Supervisor --> Synthesizer[Synthesizer Node]
         end
 
         subgraph Parallel["Parallel Branch Review (Phase 10: Fan-Out / Fan-In)"]
             Dispatcher[Dispatcher Node] <--> Router
-            Dispatcher -. Fan-out .-> SecNode[Security Audit Node]
-            Dispatcher -. Fan-out .-> PerfNode[Performance Analysis Node]
-            Dispatcher -. Fan-out .-> StyleNode[Style Compliance Node]
-            SecNode & PerfNode & StyleNode -. Fan-in .-> Aggregator[Weighted Decision Aggregator]
+            Dispatcher -.->|Fan-out| SecNode[Security Audit Node]
+            Dispatcher -.->|Fan-out| PerfNode[Performance Analysis Node]
+            Dispatcher -.->|Fan-out| StyleNode[Style Compliance Node]
+            SecNode --> Aggregator[Weighted Decision Aggregator]
+            PerfNode --> Aggregator
+            StyleNode --> Aggregator
         end
     end
 

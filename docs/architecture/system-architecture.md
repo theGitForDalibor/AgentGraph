@@ -36,31 +36,34 @@ flowchart TD
             Supervisor[Supervisor 主管节点] <--> Router
 
             subgraph ResearcherSubgraph["Researcher 调研子图 (独立私有 ResearcherState)"]
-                R_Plan[research_planner<br>检索规划] --> R_Router{资料已充分?}
-                R_Router -- 否 --> R_Exec[search_executor<br>知识检索] --> R_Plan
-                R_Router -- 是 --> R_Summary[生成结构化调研简报]
+                R_Plan["research_planner<br>检索规划"] --> R_Router{"资料已充分?"}
+                R_Router -->|否| R_Exec["search_executor<br>知识检索"]
+                R_Exec --> R_Plan
+                R_Router -->|是| R_Summary["生成结构化调研简报"]
             end
 
             subgraph CoderSubgraph["Coder 研发子图 (独立私有 CoderState)"]
-                C_Draft[coder_draft<br>代码起草与修复] --> C_Test[coder_test<br>语法分析与自测]
-                C_Test --> C_Router{测试通过或超限?}
-                C_Router -- 未通过且未超限 --> C_Draft
-                C_Router -- 通过/超限 --> C_Done[产出定稿代码资产]
+                C_Draft["coder_draft<br>代码起草与修复"] --> C_Test["coder_test<br>语法分析与自测"]
+                C_Test --> C_Router{"测试通过或超限?"}
+                C_Router -->|未通过且未超限| C_Draft
+                C_Router -->|通过或超限| C_Done["产出定稿代码资产"]
             end
 
             Supervisor -->|1. 派发调研| R_Plan
-            R_Summary -. 2. 交付调研简报 .-> Supervisor
+            R_Summary -.->|2. 交付调研简报| Supervisor
             Supervisor -->|3. 派发编码| C_Draft
-            C_Done -. 4. 交付代码资产 .-> Supervisor
+            C_Done -.->|4. 交付代码资产| Supervisor
             Supervisor --> Synthesizer[成果汇总 Synthesizer]
         end
 
         subgraph Parallel["扇出扇入并发审查架构 (Phase 10: Fan-out / Fan-in)"]
             Dispatcher[Dispatcher 分发器] <--> Router
-            Dispatcher -. 扇出并发 .-> SecNode[安全漏洞审计]
-            Dispatcher -. 扇出并发 .-> PerfNode[性能复杂度分析]
-            Dispatcher -. 扇出并发 .-> StyleNode[PEP8 规范校验]
-            SecNode & PerfNode & StyleNode -. 扇入汇聚 .-> Aggregator[加权决议汇聚节点]
+            Dispatcher -.->|扇出并发| SecNode[安全漏洞审计]
+            Dispatcher -.->|扇出并发| PerfNode[性能复杂度分析]
+            Dispatcher -.->|扇出并发| StyleNode[PEP8 规范校验]
+            SecNode --> Aggregator[加权决议汇聚节点]
+            PerfNode --> Aggregator
+            StyleNode --> Aggregator
         end
     end
 
