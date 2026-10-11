@@ -21,59 +21,73 @@ AgentGraph 采用严格的分层解耦架构，将智能体的“思考、决策
 
 ```mermaid
 flowchart TD
-    User([终端用户 / API 客户端]) <--> App[Application Layer: CLI 命令行客户端]
-    
-    subgraph Engine["AgentGraph 核心编排引擎"]
-        App <--> Router{拓扑路由与调度}
+    %% 1. 应用接入层
+    subgraph AppLayer["1. 终端应用层 (Application Layer)"]
+        CLI["CLI 终端命令行客户端 (Typer / Rich UI)<br><code>chat</code> | <code>run</code> | <code>supervise</code> | <code>review</code>"]
+    end
 
-        subgraph CoreReAct["基础 ReAct & HITL 闭环"]
-            Planner[Planner 规划节点] <--> Router
-            Tool[Tool Executor 工具节点] <--> Router
-            Approval[Human Approval 审批节点] <--> Router
+    %% 2. 图编排引擎层 (三大运行拓扑)
+    subgraph EngineLayer["2. 声明式图编排引擎层 (StateGraph Engine)"]
+        direction TB
+
+        subgraph ReActFlow["模式 A: 基础 ReAct & HITL 闭环 (Phase 1~8)"]
+            direction LR
+            P["Planner 规划节点"] -->|决策工具| R_Check{敏感操作?}
+            R_Check -->|普通操作| T["Tool 执行节点"]
+            R_Check -->|高危拦截| H["Human Approval (无状态挂起)"]
+            T -->|工具反馈回环| P
+            H -.->|Command 唤醒| T
         end
 
-        subgraph Hierarchical["分层多智能体架构 (Phase 9: Supervisor + Subgraphs)"]
-            Supervisor[Supervisor 主管节点] <--> Router
+        subgraph HierarchicalFlow["模式 B: 分层多智能体协同 (Phase 9: Supervisor + Subgraphs)"]
+            direction LR
+            Sup["Supervisor 主管"] -->|1. 派发调研| SubR
+            SubR -.->|2. 交付简报| Sup
+            Sup -->|3. 需求下发| SubC
+            SubC -.->|4. 交付代码| Sup
+            Sup --> Syn["成果汇总 Synthesizer"]
 
-            subgraph ResearcherSubgraph["Researcher 调研子图 (独立私有 ResearcherState)"]
-                R_Plan["research_planner<br>检索规划"] --> R_Router{"资料已充分?"}
-                R_Router -->|否| R_Exec["search_executor<br>知识检索"]
-                R_Exec --> R_Plan
-                R_Router -->|是| R_Summary["生成结构化调研简报"]
+            subgraph SubR["Researcher 调研子图 (独立私有 ResearcherState)"]
+                direction TB
+                RP["research_planner 检索规划"] <--> SE["search_executor 知识检索"]
             end
 
-            subgraph CoderSubgraph["Coder 研发子图 (独立私有 CoderState)"]
-                C_Draft["coder_draft<br>代码起草与修复"] --> C_Test["coder_test<br>语法分析与自测"]
-                C_Test --> C_Router{"测试通过或超限?"}
-                C_Router -->|未通过且未超限| C_Draft
-                C_Router -->|通过或超限| C_Done["产出定稿代码资产"]
+            subgraph SubC["Coder 研发子图 (独立私有 CoderState)"]
+                direction TB
+                CD["coder_draft 代码起草"] --> CT{"coder_test 语法自测"}
+                CT -->|未通过自测| CD
             end
-
-            Supervisor -->|1. 派发调研| R_Plan
-            R_Summary -.->|2. 交付调研简报| Supervisor
-            Supervisor -->|3. 派发编码| C_Draft
-            C_Done -.->|4. 交付代码资产| Supervisor
-            Supervisor --> Synthesizer[成果汇总 Synthesizer]
         end
 
-        subgraph Parallel["扇出扇入并发审查架构 (Phase 10: Fan-out / Fan-in)"]
-            Dispatcher[Dispatcher 分发器] <--> Router
-            Dispatcher -.->|扇出并发| SecNode[安全漏洞审计]
-            Dispatcher -.->|扇出并发| PerfNode[性能复杂度分析]
-            Dispatcher -.->|扇出并发| StyleNode[PEP8 规范校验]
-            SecNode --> Aggregator[加权决议汇聚节点]
-            PerfNode --> Aggregator
-            StyleNode --> Aggregator
+        subgraph ParallelFlow["模式 C: 扇出扇入并发审查 (Phase 10: Fan-Out / Fan-In)"]
+            direction LR
+            Disp["Dispatcher 任务分发"]
+            Disp ==> Sec["安全漏洞审计节点"]
+            Disp ==> Perf["性能复杂度分析节点"]
+            Disp ==> Style["PEP8 编码规范节点"]
+            Sec & Perf & Style ==> Agg["加权决议汇聚 Aggregator"]
         end
     end
 
-    subgraph StateManagement["状态管理与存储底座"]
-        Engine <--> State[(AgentState: 消息流 / 草稿本 / 规约器)]
-        Engine <--> Checkpointer[(SqliteSaver: 检查点快照存储)]
+    %% 3. 状态与存储底座
+    subgraph StateLayer["3. 状态管理与持久化底座 (State & Storage)"]
+        direction LR
+        State["AgentState 单一可信数据源<br>(add_messages / append_reducer / merge_dict_reducer)"]
+        CP["SqliteSaver 状态检查点持久化<br>(全系统时空快照 / 多会话隔离 / 时间旅行)"]
     end
 
-    Tool --> ExtTools[本地安全工具 / 敏感工具注册表]
-    Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI 兼容协议]
+    %% 4. 执行与适配基础设施
+    subgraph InfraLayer["4. 基础设施与外部环境 (Infrastructure & Environment)"]
+        direction LR
+        LLM["LLM Adapter 模型统一适配<br>(离线确定性 DemoModel / 通用 OpenAI 兼容协议)"]
+        Tools["本地工具执行与安全拦截<br>(计算器 / 系统探测 / 文件读取 / 敏感工具注册表)"]
+    end
+
+    %% 层间流转关系
+    CLI -->|初始化与模式选择| EngineLayer
+    EngineLayer <-->|不可变快照读取 / 原子规约提交| StateLayer
+    EngineLayer -.->|模型推理| LLM
+    EngineLayer -.->|工具调用| Tools
 ```
 
 ### 2.2 模块分层职责清单
