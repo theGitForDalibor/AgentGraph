@@ -64,17 +64,43 @@ flowchart TD
     
     subgraph Engine["AgentGraph 核心图编排引擎"]
         App <--> Router{拓扑路由与调度}
-        Router <--> CoreGraph[ReAct & HITL 核心状态图]
-        Router <--> HierarchicalGraph[分层多智能体 Supervisor 主图]
-        Router <--> ParallelGraph[扇出扇入并发审查图]
-        
-        HierarchicalGraph -.-> SubResearcher[Researcher 子图]
-        HierarchicalGraph -.-> SubCoder[Coder 子图]
-        
-        ParallelGraph -. 扇出并发 .-> SecNode[安全审计节点]
-        ParallelGraph -. 扇出并发 .-> PerfNode[性能分析节点]
-        ParallelGraph -. 扇出并发 .-> StyleNode[代码风格节点]
-        SecNode & PerfNode & StyleNode -. 扇入汇聚 .-> Aggregator[加权决议汇聚节点]
+
+        subgraph CoreReAct["基础 ReAct & HITL 闭环"]
+            Planner[Planner 规划节点] <--> Router
+            Tool[Tool Executor 工具节点] <--> Router
+            Approval[Human Approval 审批节点] <--> Router
+        end
+
+        subgraph Hierarchical["分层多智能体架构 (Phase 9: Supervisor + Subgraphs)"]
+            Supervisor[Supervisor 主管节点] <--> Router
+
+            subgraph ResearcherSubgraph["Researcher 调研子图 (独立私有 ResearcherState)"]
+                R_Plan[research_planner<br>检索规划] --> R_Router{资料已充分?}
+                R_Router -- 否 --> R_Exec[search_executor<br>知识检索] --> R_Plan
+                R_Router -- 是 --> R_Summary[生成结构化调研简报]
+            end
+
+            subgraph CoderSubgraph["Coder 研发子图 (独立私有 CoderState)"]
+                C_Draft[coder_draft<br>代码起草与修复] --> C_Test[coder_test<br>语法分析与自测]
+                C_Test --> C_Router{测试通过或超限?}
+                C_Router -- 未通过且未超限 --> C_Draft
+                C_Router -- 通过/超限 --> C_Done[产出定稿代码资产]
+            end
+
+            Supervisor -->|1. 派发调研| R_Plan
+            R_Summary -. 2. 交付调研简报 .-> Supervisor
+            Supervisor -->|3. 派发编码| C_Draft
+            C_Done -. 4. 交付代码资产 .-> Supervisor
+            Supervisor --> Synthesizer[成果汇总 Synthesizer]
+        end
+
+        subgraph Parallel["扇出扇入并发审查架构 (Phase 10: Fan-out / Fan-in)"]
+            Dispatcher[Dispatcher 分发器] <--> Router
+            Dispatcher -. 扇出并发 .-> SecNode[安全漏洞审计]
+            Dispatcher -. 扇出并发 .-> PerfNode[性能复杂度分析]
+            Dispatcher -. 扇出并发 .-> StyleNode[PEP8 规范校验]
+            SecNode & PerfNode & StyleNode -. 扇入汇聚 .-> Aggregator[加权决议汇聚节点]
+        end
     end
 
     subgraph StateManagement["状态管理与存储底座"]
@@ -82,7 +108,7 @@ flowchart TD
         Engine <--> Checkpointer[(SqliteSaver: 检查点快照存储)]
     end
 
-    CoreGraph --> ExtTools[本地安全工具 / 敏感工具注册表]
+    Tool --> ExtTools[本地安全工具 / 敏感工具注册表]
     Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI 兼容协议]
 ```
 
@@ -280,18 +306,18 @@ docs/
 AgentGraph 十个递进阶段已**全部开发完成并验证通过**：
 
 ### Completed (全部完成)
-- [x] **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
-- [x] **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
-- [x] **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
-- [x] **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
-- [x] **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
-- [x] **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
-- [x] **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
-- [x] **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
-- [x] **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
-- [x] **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
-- [x] **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
-- [x] **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演、多智能体协同 (`supervise`) 与并发审查 (`review`)。
+- ✅ **Phase 0: Design Gate**: 架构全景设计、概念映射表、状态规约规范与 ADR 架构决策。
+- ✅ **Phase 1: Project Skeleton**: 现代化工程骨架、包边界与模块依赖隔离。
+- ✅ **Phase 2: Dev Infrastructure**: uv、Ruff、Mypy、Pytest 测试基建与自动化质量门禁脚本。
+- ✅ **Phase 3: StateGraph**: 底层 `StateGraph` 原生构建、TypedDict 与 Reducer 规约机制。
+- ✅ **Phase 4: Nodes**: 无状态纯函数节点设计（Planner、Tool）与异常隔离边界。
+- ✅ **Phase 5: Edges**: 静态拓扑连接、`START`/`END` 特殊节点与 Mermaid 图静态导出。
+- ✅ **Phase 6: Conditional Routing**: 动态条件边路由、ReAct 自适应闭环与防死循环保护。
+- ✅ **Phase 7: Interrupt & Resume**: 原生无状态中断挂起、外部指令唤醒与人机审批（HITL）。
+- ✅ **Phase 8: Checkpoint**: SQLite 检查点持久化、多会话隔离与时间旅行（Time Travel）快照追溯。
+- ✅ **Phase 9: Subgraph**: 分层多智能体（Supervisor / Researcher / Coder）独立子图与黑盒状态隔离。
+- ✅ **Phase 10: Parallel Branch**: 扇出（Fan-out）并发分发、扇入（Fan-in）汇聚节点与并发状态安全规约。
+- ✅ **Application Layer: CLI**: 完整的交互式终端 REPL 会话、单次任务推演、多智能体协同 (`supervise`) 与并发审查 (`review`)。
 
 ### Future & Extension Outlook (后续展望与生态扩展)
 - [ ] **MCP (Model Context Protocol) Client**: 对接标准 MCP 分布式工具集成协议。

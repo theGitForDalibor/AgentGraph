@@ -189,11 +189,11 @@ flowchart TD
 | **Phase 1** | V0 Foundation | 包规范 / 依赖配置 / 模块骨架 | **Completed** | `tests/test_skeleton.py` (7 tests) |
 | **Phase 2** | V0 Foundation | Ruff / Mypy / Pytest 基建 | **Completed** | `tests/test_infra.py` (6 tests) |
 | **Phase 3** | V1 Graph Foundation | StateGraph / Reducer 规约 | **Completed** | `tests/test_state_graph.py` (6 tests) |
-| **Phase 4** | V1 Graph Foundation | Planner & Tool Callable Nodes | **Completed** | `tests/test_nodes.py` (7 tests) |
+| **Phase 4** | V1 Graph Foundation | Planner & Tool Callable Nodes | **Completed** | `tests/test_nodes.py` (8 tests) |
 | **Phase 5** | V1 Graph Foundation | Normal Edges / START & END | **Completed** | `tests/test_static_edges.py` (6 tests) |
 | **Phase 6** | V2 Runtime Orchestration | Conditional Edge / ReAct Loop | **Completed** | `tests/test_conditional_routing.py` (4 tests) |
 | **Phase 7** | V2 Runtime Orchestration | Interrupt / Resume / HITL | **Completed** | `tests/test_interrupt_resume.py` (4 tests) |
 | **Phase 8** | V2 Runtime Orchestration | Checkpointer / Time Travel | **Completed** | `tests/test_checkpoint.py` (4 tests) |
-| **CLI** | Application Layer | Terminal REPL / Tasks / Sessions | **Completed** | `tests/test_cli.py` (12 tests) |
+| **CLI** | Application Layer | Terminal REPL / Tasks / Sessions | **Completed** | `tests/test_cli.py` (17 tests) |
 | **Phase 9** | V3 Advanced Graph | Subgraph / Multi-Agent | **Completed** | `tests/test_subgraph.py` (7 tests) |
 | **Phase 10** | V3 Advanced Graph | Fan-out / Fan-in / Parallel Reducer | **Completed** | `tests/test_parallel_branch.py` (7 tests) |

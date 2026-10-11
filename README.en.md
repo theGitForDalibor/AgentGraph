@@ -64,17 +64,43 @@ flowchart TD
     
     subgraph Engine["AgentGraph Core Orchestration Engine"]
         App <--> Router{Topology Router & Dispatcher}
-        Router <--> CoreGraph[ReAct & HITL StateGraph]
-        Router <--> HierarchicalGraph[Hierarchical Multi-Agent Supervisor Graph]
-        Router <--> ParallelGraph[Fan-Out / Fan-In Parallel Review Graph]
-        
-        HierarchicalGraph -.-> SubResearcher[Researcher Subgraph]
-        HierarchicalGraph -.-> SubCoder[Coder Subgraph]
-        
-        ParallelGraph -. Fan-out .-> SecNode[Security Audit Node]
-        ParallelGraph -. Fan-out .-> PerfNode[Performance Analysis Node]
-        ParallelGraph -. Fan-out .-> StyleNode[Style Compliance Node]
-        SecNode & PerfNode & StyleNode -. Fan-in .-> Aggregator[Weighted Decision Aggregator]
+
+        subgraph CoreReAct["Core ReAct & HITL Loop"]
+            Planner[Planner Node] <--> Router
+            Tool[Tool Executor Node] <--> Router
+            Approval[Human Approval Node] <--> Router
+        end
+
+        subgraph Hierarchical["Hierarchical Multi-Agent (Phase 9: Supervisor + Subgraphs)"]
+            Supervisor[Supervisor Node] <--> Router
+
+            subgraph ResearcherSubgraph["Researcher Subgraph (Private ResearcherState)"]
+                R_Plan[research_planner<br>Plan Search] --> R_Router{Sufficient Info?}
+                R_Router -- No --> R_Exec[search_executor<br>Knowledge Retrieval] --> R_Plan
+                R_Router -- Yes --> R_Summary[Synthesize Briefing]
+            end
+
+            subgraph CoderSubgraph["Coder Subgraph (Private CoderState)"]
+                C_Draft[coder_draft<br>Draft & Revise] --> C_Test[coder_test<br>AST Parse & Self-Test]
+                C_Test --> C_Router{Passed or Exceeded?}
+                C_Router -- Failed & Under Limit --> C_Draft
+                C_Router -- Passed/Exceeded --> C_Done[Produce Code Artifact]
+            end
+
+            Supervisor -->|1. Dispatch Research| R_Plan
+            R_Summary -. 2. Deliver Briefing .-> Supervisor
+            Supervisor -->|3. Dispatch Coding| C_Draft
+            C_Done -. 4. Deliver Code Artifact .-> Supervisor
+            Supervisor --> Synthesizer[Synthesizer Node]
+        end
+
+        subgraph Parallel["Parallel Branch Review (Phase 10: Fan-Out / Fan-In)"]
+            Dispatcher[Dispatcher Node] <--> Router
+            Dispatcher -. Fan-out .-> SecNode[Security Audit Node]
+            Dispatcher -. Fan-out .-> PerfNode[Performance Analysis Node]
+            Dispatcher -. Fan-out .-> StyleNode[Style Compliance Node]
+            SecNode & PerfNode & StyleNode -. Fan-in .-> Aggregator[Weighted Decision Aggregator]
+        end
     end
 
     subgraph StateManagement["State & Persistence Foundation"]
@@ -82,7 +108,7 @@ flowchart TD
         Engine <--> Checkpointer[(SqliteSaver: Checkpoint Snapshots)]
     end
 
-    CoreGraph --> ExtTools[Local Safe Tools / Sensitive Tool Registry]
+    Tool --> ExtTools[Local Safe Tools / Sensitive Tool Registry]
     Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI Compatible]
 ```
 
@@ -280,18 +306,18 @@ docs/
 All ten progressive phases are **100% completed and test-verified**:
 
 ### Completed
-- [x] **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
-- [x] **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
-- [x] **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
-- [x] **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
-- [x] **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
-- [x] **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
-- [x] **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
-- [x] **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
-- [x] **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
-- [x] **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
-- [x] **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
-- [x] **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, multi-agent (`supervise`), and concurrent review (`review`).
+- ✅ **Phase 0: Design Gate**: Architecture blueprints, paradigm migration mapping, state schema specs, and ADRs.
+- ✅ **Phase 1: Project Skeleton**: Modern Python project layout, package boundaries, and modular isolation.
+- ✅ **Phase 2: Dev Infrastructure**: uv, Ruff, Mypy, Pytest foundation, and automated quality gate scripts.
+- ✅ **Phase 3: StateGraph**: Core `StateGraph` instantiation, TypedDict schemas, and reducer mechanisms.
+- ✅ **Phase 4: Nodes**: Pure functional node factories (`planner`, `tool_executor`) and error boundary isolation.
+- ✅ **Phase 5: Edges**: Static edge connections, `START`/`END` special nodes, and Mermaid diagram export.
+- ✅ **Phase 6: Conditional Routing**: Dynamic conditional edges, ReAct feedback loops, and recursion limit fuses.
+- ✅ **Phase 7: Interrupt & Resume**: Native stateless interrupt suspensions, external command resume, and HITL approvals.
+- ✅ **Phase 8: Checkpoint**: SQLite persistence, multi-tenant session isolation, and time-travel state recovery.
+- ✅ **Phase 9: Subgraph**: Hierarchical multi-agent orchestration (Supervisor / Researcher / Coder) with isolated state scopes.
+- ✅ **Phase 10: Parallel Branch**: Fan-out dispatch, Fan-in aggregation nodes, and deterministic parallel reducer merging.
+- ✅ **Application Layer: CLI**: Interactive REPL multi-turn chat, task runner, multi-agent (`supervise`), and concurrent review (`review`).
 
 ### Future & Extension Outlook
 - [ ] **MCP (Model Context Protocol) Client**: Standardized Model Context Protocol (MCP) tool integration.

@@ -1,7 +1,7 @@
 # AgentGraph 系统架构设计 (System Architecture)
 
-> **当前状态**: 已实现 (Implemented - Phase 0~8 + CLI Application Layer)  
-> **核心机制**: 基于 LangGraph 的声明式有向状态图与 Pregel 超步执行引擎
+> **当前状态**: 已实现 (Implemented - Phase 0~10 全部完成 + CLI Application Layer)  
+> **核心机制**: 基于 LangGraph 的声明式有向状态图、Pregel 超步执行引擎、分层子图与并发分支
 
 ---
 
@@ -9,59 +9,81 @@
 
 AgentGraph 是自主智能体从**命令式运行时循环（Imperative Runtime Loop）**向**声明式图编排系统（Declarative Graph Orchestrator）**演进的工业级参考工程实现。
 
-传统的自主智能体往往依赖一个过程式的 `while` 循环驱动全局逻辑。随着智能体业务复杂度攀升，这种命令式架构暴露出控制流面条化、并发状态竞态、人机协同（HITL）阻塞等待、缺乏细粒度时空状态快照等系统级缺陷。
+传统的自主智能体往往依赖一个过程式的 `while` 循环驱动全局逻辑。随着智能体业务复杂度攀升，这种命令式架构暴露出控制流面条化、并发状态竞态、人机协同（HITL）阻塞等待、缺乏细粒度时空状态快照、多角色子图耦合以及并发无法确定性规约等系统级缺陷。
 
-AgentGraph 采用严格的分层解耦架构，将智能体的“思考、决策、工具调用、人工介入、持久化”全部抽象为**图拓扑（Graph Topology）**与**状态规约（State Reducer）**，从上层应用接口到底层持久化存储，层层确立清晰的工程边界与类型契约。
+AgentGraph 采用严格的分层解耦架构，将智能体的“思考、决策、工具调用、人工介入、持久化、多智能体协同、并发审查”全部抽象为**图拓扑（Graph Topology）**与**状态规约（State Reducer）**，从上层应用接口到底层持久化存储，层层确立清晰的工程边界与类型契约。
 
 ---
 
-## 2. 分层架构全景 (Layered Architecture)
+## 2. 分层架构与图编排拓扑 (Architecture Topology)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Application Layer                        │
-│   (CLI Entrypoint / REPL Session / Task Runner / Web API)   │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ Ingest User Input & Config
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    StateGraph Layer                         │
-│  (Graph Topology / Compilation / Edges / Conditional Router)│
-└──────────────┬───────────────────────────────┬──────────────┘
-               │ Invokes Nodes                 │ Reads / Writes
-               ▼                               ▼
-┌──────────────────────────────┐ ┌─────────────────────────────┐
-│         Nodes Layer          │ │         State Layer         │
-│   (Planner / Tool / HITL /   │ │  (TypedDict / Reducers /    │
-│    Subgraphs / Aggregators)  │ │   Message History / Delta)  │
-└──────────────┬───────────────┘ └─────────────────────────────┘
-               │ Delegates Execution
-               ▼
-┌──────────────────────────────┐ ┌─────────────────────────────┐
-│         Tools Layer          │ │      LLM Adapter Layer      │
-│ (Custom Tools / Shell / FS / │ │  (DemoModel / OpenAI-Compat/│
-│  MCP Client / Ext Integr.)   │ │   Prompt Templates / Schemas│
-└──────────────┬───────────────┘ └─────────────┬───────────────┘
-               │                               │
-               └───────────────┬───────────────┘
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Infrastructure Layer                     │
-│   (SqliteSaver / MemorySaver / Cache / Logging / Auditing)  │
-└─────────────────────────────────────────────────────────────┘
+### 2.1 系统全局拓扑图 (含分层子图与并发分支)
+
+```mermaid
+flowchart TD
+    User([终端用户 / API 客户端]) <--> App[Application Layer: CLI 命令行客户端]
+    
+    subgraph Engine["AgentGraph 核心编排引擎"]
+        App <--> Router{拓扑路由与调度}
+
+        subgraph CoreReAct["基础 ReAct & HITL 闭环"]
+            Planner[Planner 规划节点] <--> Router
+            Tool[Tool Executor 工具节点] <--> Router
+            Approval[Human Approval 审批节点] <--> Router
+        end
+
+        subgraph Hierarchical["分层多智能体架构 (Phase 9: Supervisor + Subgraphs)"]
+            Supervisor[Supervisor 主管节点] <--> Router
+
+            subgraph ResearcherSubgraph["Researcher 调研子图 (独立私有 ResearcherState)"]
+                R_Plan[research_planner<br>检索规划] --> R_Router{资料已充分?}
+                R_Router -- 否 --> R_Exec[search_executor<br>知识检索] --> R_Plan
+                R_Router -- 是 --> R_Summary[生成结构化调研简报]
+            end
+
+            subgraph CoderSubgraph["Coder 研发子图 (独立私有 CoderState)"]
+                C_Draft[coder_draft<br>代码起草与修复] --> C_Test[coder_test<br>语法分析与自测]
+                C_Test --> C_Router{测试通过或超限?}
+                C_Router -- 未通过且未超限 --> C_Draft
+                C_Router -- 通过/超限 --> C_Done[产出定稿代码资产]
+            end
+
+            Supervisor -->|1. 派发调研| R_Plan
+            R_Summary -. 2. 交付调研简报 .-> Supervisor
+            Supervisor -->|3. 派发编码| C_Draft
+            C_Done -. 4. 交付代码资产 .-> Supervisor
+            Supervisor --> Synthesizer[成果汇总 Synthesizer]
+        end
+
+        subgraph Parallel["扇出扇入并发审查架构 (Phase 10: Fan-out / Fan-in)"]
+            Dispatcher[Dispatcher 分发器] <--> Router
+            Dispatcher -. 扇出并发 .-> SecNode[安全漏洞审计]
+            Dispatcher -. 扇出并发 .-> PerfNode[性能复杂度分析]
+            Dispatcher -. 扇出并发 .-> StyleNode[PEP8 规范校验]
+            SecNode & PerfNode & StyleNode -. 扇入汇聚 .-> Aggregator[加权决议汇聚节点]
+        end
+    end
+
+    subgraph StateManagement["状态管理与存储底座"]
+        Engine <--> State[(AgentState: 消息流 / 草稿本 / 规约器)]
+        Engine <--> Checkpointer[(SqliteSaver: 检查点快照存储)]
+    end
+
+    Tool --> ExtTools[本地安全工具 / 敏感工具注册表]
+    Engine --> ModelAdapter[LLM Adapter: DemoModel / OpenAI 兼容协议]
 ```
 
-### 2.1 模块分层职责清单
+### 2.2 模块分层职责清单
 
 | 架构层级 | 源码目录 | 核心职责 | 当前实现状态 |
 | :--- | :--- | :--- | :--- |
-| **Application Layer** | `cli/` | 提供终端交互入口（Typer/Rich），负责参数解析、会话配置、REPL 对话流转与人机审批交互提示。 | **Implemented** |
-| **StateGraph Layer** | `graph/` | 维护有向图拓扑，包含图构建器（`builder.py`）、静态连线（`edges.py`）、条件路由（`router.py`）、ReAct 闭环（`react_graph.py`）与 HITL 状态图（`hitl_graph.py`）。 | **Implemented** |
-| **Nodes Layer** | `nodes/` | 无状态纯函数/可调用对象节点。提供规划节点（`planner.py`）、工具执行节点（`tool_executor.py`）、人机核准节点（`human_approval.py`）以及异常边界装饰器（`base.py`）。 | **Implemented** |
-| **State Layer** | `state/` | 强类型数据模型（`agent_state.py`）。定义 `AgentState` 规范及其配套规约器（`add_messages`、`append_reducer`、`merge_dict_reducer`）。 | **Implemented** |
-| **Tools Layer** | `tools/`, `cli/tools.py` | 封装智能体与物理环境交互的具体能力（计算器、系统信息采集、文件读取、模拟高危删除等），声明敏感工具清单 `CLI_SENSITIVE_TOOLS`。 | **Implemented** |
-| **LLM Adapter Layer** | `cli/llm_factory.py` | 大语言模型统一适配层。提供离线确定性 Demo 规则桩（`DemoModel`）与基于 `httpx` 的通用 OpenAI 兼容协议客户端（`OpenAICompatibleModel`）。 | **Implemented** |
-| **Infrastructure Layer** | `checkpoints/` | 状态持久化与快照管理。提供 `create_sqlite_saver`、`create_memory_saver` 以及用于时间旅行与会话隔离的 `CheckpointManager`。 | **Implemented** |
+| **Application Layer** | `cli/` | 提供终端交互入口（Typer/Rich），包含 `chat`, `run`, `supervise`, `review`, `sessions` 子命令，支持多引擎模式切换。 | **Implemented** |
+| **StateGraph Layer** | `graph/` | 维护有向图拓扑，包含图构建器、条件路由、ReAct 图、HITL 图、分层 Supervisor 主图（`parent_graph.py`）、并发分支图（`parallel_graph.py`）及领域独立子图（`subgraphs/`）。 | **Implemented** |
+| **Nodes Layer** | `nodes/` | 无状态纯函数/可调用对象节点。包含规划器（`planner.py`）、工具执行器（`tool_executor.py`）、人工审批（`human_approval.py`）、并发汇聚（`aggregators.py`）及异常边界装饰器（`base.py`）。 | **Implemented** |
+| **State Layer** | `state/` | 强类型数据模型（`agent_state.py`）。定义统一状态模式及 `add_messages`、`append_reducer`、`merge_dict_reducer` 规约器。 | **Implemented** |
+| **Tools Layer** | `tools/`, `cli/tools.py` | 封装智能体与物理环境交互的具体能力（计算器、系统信息采集、文件读取、模拟删除等）及高危工具拦截注册表。 | **Implemented** |
+| **LLM Adapter Layer** | `cli/llm_factory.py` | 大语言模型统一适配层。提供离线确定性 Demo 规则桩（`DemoModel`）与通用 OpenAI 兼容协议客户端（`OpenAICompatibleModel`）。 | **Implemented** |
+| **Infrastructure Layer** | `checkpoints/` | 状态持久化与快照管理。提供 `create_sqlite_saver`、`create_memory_saver` 及时间旅行管理器 `CheckpointManager`。 | **Implemented** |
 
 ---
 
