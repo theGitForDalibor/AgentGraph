@@ -43,11 +43,11 @@ def build_parallel_branch_graph(
     builder = create_agent_graph_builder(AgentState)
 
     # 1. 注册扇入汇聚节点
-    builder.add_node("aggregator", aggregator_node)  # type: ignore[call-overload]
+    builder.add_node("aggregator", aggregator_node)  # type: ignore
 
     # 2. 注册前置分发节点 (若存在)
     if dispatcher_node:
-        builder.add_node("dispatcher", dispatcher_node)  # type: ignore[call-overload]
+        builder.add_node("dispatcher", dispatcher_node)  # type: ignore
         builder.add_edge(START, "dispatcher")
         fan_out_source = "dispatcher"
     else:
@@ -55,7 +55,7 @@ def build_parallel_branch_graph(
 
     # 3. 注册各并发分支并建立扇出与扇入连线
     for branch_name, branch_func in branch_nodes.items():
-        builder.add_node(branch_name, branch_func)  # type: ignore[call-overload]
+        builder.add_node(branch_name, branch_func)  # type: ignore
         # 扇出边: 源节点 -> 各并发分支
         builder.add_edge(fan_out_source, branch_name)
         # 扇入边: 各并发分支 -> 汇聚节点

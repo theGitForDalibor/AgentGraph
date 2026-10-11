@@ -37,6 +37,7 @@ uv run jarvis chat [OPTIONS]
 | :--- | :--- | :--- | :--- |
 | `--thread-id` | `-t` | 自动生成唯一 UUID | 指定复用或新建的会话 ID，支持跨终端无缝恢复历史会话。 |
 | `--demo` | - | `False` | 启用内置离线确定性 Demo 规则模型，**零 API Key、零网络依赖开箱即用**。 |
+| `--mode` | `-M` | `default` | 编排拓扑模式：`default` (ReAct+HITL)、`hierarchical` (多智能体子图)、`review` (并发审查)。 |
 | `--model` | `-m` | 环境变量或默认值 | 指定大语言模型名称（如 `deepseek-chat`、`gpt-4o`）。 |
 | `--provider` | `-p` | `None` (根据环境自适应) | 指定模型提供商：`demo`、`openai`、`deepseek`。 |
 | `--db` | - | `.jarvis_checkpoints.db` | 指定 SQLite 状态检查点持久化数据库存储路径。 |
@@ -76,6 +77,7 @@ uv run jarvis run "任务提示词" [OPTIONS]
 | `PROMPT` | (位置参数) | **必填** | 待执行的任务自然语言指令字符串。 |
 | `--thread-id` | `-t` | 自动生成唯一 UUID | 指定会话 ID。 |
 | `--demo` | - | `False` | 使用内置离线 Demo 演示模型。 |
+| `--mode` | `-M` | `default` | 拓扑模式：`default` (ReAct+HITL)、`hierarchical` (分层多智能体)、`review` (并发代码审查)。 |
 | `--quiet` | `-q` | `False` | 安静模式：隐藏思考轨迹卡片与工具调用细节，仅输出最终回答。 |
 | `--yes` | `-y` | `False` | 非交互式自动化批处理：遇到敏感工具拦截时自动核准放行。 |
 | `--model` | `-m` | 环境变量或默认值 | 指定模型名称。 |
@@ -86,19 +88,60 @@ uv run jarvis run "任务提示词" [OPTIONS]
 # 1. 执行数学计算任务 (展示完整思考与工具调用卡片)
 uv run jarvis run "帮我计算 25 * 40 + 150" --demo
 
-# 2. 安静模式 (仅输出最终计算结论)
+# 2. 执行分层多智能体协同研发 (Phase 9)
+uv run jarvis run "开发带重试机制的 HTTP 客户端" --mode hierarchical --demo
+
+# 3. 安静模式 (仅输出最终结论)
 uv run jarvis run "帮我计算 25 * 40 + 150" --demo --quiet
 
-# 3. 体验人机核准审批中断拦截 (终端弹出交互确认)
+# 4. 体验人机核准审批中断拦截 (终端弹出交互确认)
 uv run jarvis run "帮我删除 app.log" --demo
 
-# 4. CI/脚本模式：非交互式自动核准敏感操作
+# 5. CI/脚本模式：非交互式自动核准敏感操作
 uv run jarvis run "帮我删除 app.log" --demo --yes
 ```
 
 ---
 
-### 2.3 `sessions` — 历史会话快照查看
+### 2.3 `supervise` — 分层多智能体协同研发 (Phase 9)
+
+专用于多角色分层协同任务。启动主图 Supervisor，在黑盒隔离上下文中按序调度 Researcher（知识调研子图）与 Coder（代码研发与自测修复子图），并将最终交付物汇总输出。
+
+```bash
+uv run jarvis supervise "任务目标" [OPTIONS]
+```
+
+#### 使用示例:
+```bash
+# 离线确定性多智能体协同
+uv run jarvis supervise "实现 Python LRU 缓存模块" --demo
+
+# 安静模式（仅输出最终综合交付报告）
+uv run jarvis supervise "实现二叉树前序遍历" --demo --quiet
+```
+
+---
+
+### 2.4 `review` — 多维度代码并发审查 (Phase 10)
+
+专用于自动化代码质量把关。基于扇出（Fan-out）与扇入（Fan-in）并发拓扑，在单个超步中同时并发执行安全漏洞审计、性能复杂度评估与 PEP8 规范校验，并在汇总节点生成加权评级决议。
+
+```bash
+uv run jarvis review "代码字符串或文件路径" [OPTIONS]
+```
+
+#### 使用示例:
+```bash
+# 1. 直接审查一段 Python 代码字符串
+uv run jarvis review "def run(x): eval(x)"
+
+# 2. 审查指定本地代码源文件
+uv run jarvis review path/to/script.py
+```
+
+---
+
+### 2.5 `sessions` — 历史会话快照查看
 
 查询保存在 SQLite 数据库中的所有历史会话、最新检查点 ID 及快照超步总数。
 
@@ -111,26 +154,16 @@ uv run jarvis sessions [OPTIONS]
 | :--- | :--- | :--- |
 | `--db` | `.jarvis_checkpoints.db` | 指定 SQLite 数据库文件路径。 |
 
-#### 输出示例:
-```text
-                     AgentGraph - 历史会话清单 (.jarvis_checkpoints.db)                     
-┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
-┃ Thread ID (会话)    ┃ 最新 Checkpoint ID                   ┃    快照总数 ┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
-│ session_prod_01     │ 1ef78a9c-0123-64b2-a001-098765432101 │           8 │
-│ session_demo_test   │ 1ef78a9b-4567-68c1-b002-1234567890ab │           4 │
-└─────────────────────┴──────────────────────────────────────┴─────────────┘
-```
-
 ---
 
-### 2.4 `version` — 系统版本查询
+### 2.6 `version` — 系统版本查询
 
 输出 AgentGraph 当前版本信息。
 
 ```bash
 uv run jarvis version
 ```
+
 
 ---
 

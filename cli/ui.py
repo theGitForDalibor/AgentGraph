@@ -29,12 +29,18 @@ if sys.platform == "win32":
 console = Console()
 
 
-def print_banner(thread_id: str, model_name: str, db_path: str) -> None:
+def print_banner(
+    thread_id: str,
+    model_name: str,
+    db_path: str,
+    mode: str = "default",
+) -> None:
     """打印 CLI 启动欢迎横幅与运行时元数据信息。"""
     banner_text = Text()
     banner_text.append("[*] Jarvis Agent Pro (LangGraph CLI)\n", style="bold cyan")
     banner_text.append("声明式状态图驱动的企业级自主智能体参考实现\n\n", style="dim italic")
     banner_text.append(f"  * 会话 ID (thread_id): {thread_id}\n", style="bold green")
+    banner_text.append(f"  * 编排拓扑 (topology):  {mode}\n", style="bold cyan")
     banner_text.append(f"  * 推理模型 (model):     {model_name}\n", style="bold yellow")
     banner_text.append(f"  * 状态持久化 (sqlite):   {db_path}\n", style="bold magenta")
     banner_text.append("  * 退出指令: 输入 'exit'、'quit' 或按 Ctrl+C\n", style="dim")

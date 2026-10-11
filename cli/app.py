@@ -50,6 +50,14 @@ def chat_command(
         bool,
         typer.Option("--demo", help="使用内置离线 Demo 演示模型（无需任何 API Key）"),
     ] = False,
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-M",
+            help="图编排拓扑模式: default (ReAct+HITL), hierarchical (多智能体分层子图), review (多维度代码并发审查)",
+        ),
+    ] = "default",
 ) -> None:
     """启动交互式多轮对话会话 (REPL 模式)。"""
     try:
@@ -59,6 +67,7 @@ def chat_command(
             model_name=model,
             provider=provider,
             demo=demo,
+            mode=mode,
         )
     except Exception as exc:
         print_error(f"初始化运行时失败: {exc!s}")
@@ -68,6 +77,7 @@ def chat_command(
         thread_id=session.thread_id,
         model_name=session.model_label,
         db_path=session.db_path,
+        mode=session.mode_label,
     )
 
     while True:
@@ -101,6 +111,10 @@ def run_command(
         str | None,
         typer.Option("--model", "-m", help="指定模型名称"),
     ] = None,
+    provider: Annotated[
+        str | None,
+        typer.Option("--provider", "-p", help="模型提供商 (demo, openai, deepseek)"),
+    ] = None,
     db: Annotated[
         str,
         typer.Option("--db", help="SQLite 检查点持久化数据库路径"),
@@ -109,6 +123,14 @@ def run_command(
         bool,
         typer.Option("--demo", help="使用内置离线 Demo 演示模型"),
     ] = False,
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-M",
+            help="图编排拓扑模式: default (ReAct+HITL), hierarchical (多智能体分层子图), review (多维度代码并发审查)",
+        ),
+    ] = "default",
     quiet: Annotated[
         bool,
         typer.Option("--quiet", "-q", help="安静模式：只打印最终结论，不打印中间思考与工具卡片"),
@@ -124,7 +146,9 @@ def run_command(
             thread_id=thread_id,
             db_path=db,
             model_name=model,
+            provider=provider,
             demo=demo,
+            mode=mode,
         )
         answer = session.execute_turn(
             user_input=prompt,
@@ -134,6 +158,96 @@ def run_command(
         print_final_answer(answer)
     except Exception as exc:
         print_error(f"任务执行失败: {exc!s}")
+        raise typer.Exit(code=1) from exc
+
+
+@app.command("supervise")
+def supervise_command(
+    goal: Annotated[str, typer.Argument(help="待多智能体协作完成的任务目标")],
+    thread_id: Annotated[
+        str | None,
+        typer.Option("--thread-id", "-t", help="指定会话 ID"),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", "-m", help="指定模型名称"),
+    ] = None,
+    provider: Annotated[
+        str | None,
+        typer.Option("--provider", "-p", help="模型提供商 (demo, openai, deepseek)"),
+    ] = None,
+    db: Annotated[
+        str,
+        typer.Option("--db", help="SQLite 检查点持久化数据库路径"),
+    ] = ".jarvis_checkpoints.db",
+    demo: Annotated[
+        bool,
+        typer.Option("--demo", help="使用内置离线 Demo 演示模型"),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="安静模式：只打印最终综合成果"),
+    ] = False,
+) -> None:
+    """[Phase 9] 启动分层多智能体协同 (Supervisor + Researcher + Coder)。"""
+    try:
+        session = SessionRuntime(
+            thread_id=thread_id,
+            db_path=db,
+            model_name=model,
+            provider=provider,
+            demo=demo,
+            mode="hierarchical",
+        )
+        answer = session.execute_turn(
+            user_input=goal,
+            verbose=not quiet,
+        )
+        print_final_answer(answer)
+    except Exception as exc:
+        print_error(f"多智能体协同任务执行失败: {exc!s}")
+        raise typer.Exit(code=1) from exc
+
+
+@app.command("review")
+def review_command(
+    target: Annotated[
+        str,
+        typer.Argument(help="待审查的代码内容或 Python 文件路径"),
+    ],
+    thread_id: Annotated[
+        str | None,
+        typer.Option("--thread-id", "-t", help="指定会话 ID"),
+    ] = None,
+    db: Annotated[
+        str,
+        typer.Option("--db", help="SQLite 检查点持久化数据库路径"),
+    ] = ".jarvis_checkpoints.db",
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="安静模式：只打印最终审查决议"),
+    ] = False,
+) -> None:
+    """[Phase 10] 启动代码多维度并发审查 (安全 + 性能 + 风格并发分析与汇聚)。"""
+    try:
+        code_content = target
+        if os.path.isfile(target):
+            with open(target, encoding="utf-8") as f:
+                code_content = f.read()
+
+        session = SessionRuntime(
+            thread_id=thread_id,
+            db_path=db,
+            mode="review",
+        )
+        answer = session.execute_turn(
+            user_input="执行多维度代码并发质量审查",
+            verbose=not quiet,
+            target_code=code_content,
+        )
+        print_final_answer(answer)
+    except Exception as exc:
+        print_error(f"代码并发审查任务执行失败: {exc!s}")
         raise typer.Exit(code=1) from exc
 
 

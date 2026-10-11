@@ -181,3 +181,73 @@ def test_session_runtime_multi_turn_persistence() -> None:
     messages = state.values.get("messages", [])
     # 至少应有 2 轮问答和工具交互
     assert len(messages) >= 6
+
+
+def test_cli_help_includes_supervise_and_review() -> None:
+    """验证 jarvis --help 显示 supervise 与 review 新增子命令"""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "supervise" in result.stdout
+    assert "review" in result.stdout
+
+
+def test_cli_run_hierarchical_mode() -> None:
+    """验证 jarvis run --mode hierarchical 调度分层多智能体"""
+    result = runner.invoke(
+        app,
+        ["run", "开发快速排序算法", "--mode", "hierarchical", "--demo", "--db", ":memory:"],
+    )
+    assert result.exit_code == 0
+    assert "Jarvis 多智能体协同交付报告" in result.stdout
+    assert "开发快速排序算法" in result.stdout
+    assert "solution()" in result.stdout
+
+
+def test_cli_run_review_mode() -> None:
+    """验证 jarvis run --mode review 执行代码多维并发审查"""
+    code_snippet = "def calculate(): return 42"
+    result = runner.invoke(
+        app,
+        ["run", code_snippet, "--mode", "review", "--db", ":memory:"],
+    )
+    assert result.exit_code == 0
+    assert "自动化多维度代码并行审查报告" in result.stdout
+    assert "综合评估决议" in result.stdout
+
+
+def test_cli_supervise_command_standalone() -> None:
+    """验证专用子命令 jarvis supervise 正常启动并协同完成任务"""
+    result = runner.invoke(
+        app,
+        ["supervise", "实现二叉树遍历", "--demo", "--db", ":memory:"],
+    )
+    assert result.exit_code == 0
+    assert "Supervisor 主管分析" in result.stdout
+    assert "Researcher 子图交付成果" in result.stdout
+    assert "Coder 子图交付成果" in result.stdout
+    assert "Jarvis 多智能体协同交付报告" in result.stdout
+
+
+def test_cli_review_command_string_and_file(tmp_path: Path) -> None:
+    """验证专用子命令 jarvis review 支持字符串与文件输入"""
+    # 1. 直接传入代码字符串
+    result1 = runner.invoke(
+        app,
+        ["review", "def unsafe(): eval('x')", "--db", ":memory:"],
+    )
+    assert result1.exit_code == 0
+    assert "WARNING" in result1.stdout or "检出风险" in result1.stdout
+
+    # 2. 传入本地代码文件
+    test_code_file = tmp_path / "sample.py"
+    test_code_file.write_text(
+        '"""合规模块"""\ndef add(a: int, b: int) -> int:\n    return a + b\n', encoding="utf-8"
+    )
+
+    result2 = runner.invoke(
+        app,
+        ["review", str(test_code_file), "--db", ":memory:"],
+    )
+    assert result2.exit_code == 0
+    assert "自动化多维度代码并行审查报告" in result2.stdout
+    assert "审查通过 (APPROVED)" in result2.stdout
