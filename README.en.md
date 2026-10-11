@@ -60,73 +60,72 @@ AgentGraph enforces a layered, decoupled architecture with strict responsibility
 
 ```mermaid
 flowchart TD
-    %% 1. Application Layer
-    subgraph AppLayer["1. Application Layer"]
-        CLI["CLI Terminal Interface (Typer / Rich UI)<br><code>chat</code> | <code>run</code> | <code>supervise</code> | <code>review</code>"]
-    end
+    User([End User / API Client]) <--> App[Application Layer: CLI Terminal Client]
+    
+    subgraph Engine["AgentGraph Core Orchestration Engine"]
+        App --> Router{Runtime Mode Router}
 
-    %% 2. Graph Orchestration Engine
-    subgraph EngineLayer["2. Declarative Graph Orchestration Engine (StateGraph)"]
-        direction TB
-
-        subgraph ReActFlow["Mode A: Core ReAct & HITL Loop (Phase 1~8)"]
-            direction LR
-            P["Planner Node"] -->|Select Action| R_Check{Sensitive Tool?}
-            R_Check -->|Safe Tool| T["Tool Executor Node"]
-            R_Check -->|Sensitive Tool| H["Human Approval (Stateless Interrupt)"]
-            T -->|Observation Loop| P
-            H -.->|Command Resume| T
+        subgraph CoreReAct["Basic ReAct & HITL Closed Loop (Phase 1~8)"]
+            Planner[Planner Decision Node] -->|Safe Tool| Tool[Tool Executor Node]
+            Planner -->|Sensitive Action| Approval[Human Approval Node]
+            Approval -.->|Command Resume| Tool
+            Tool -->|Observation Feedback| Planner
         end
 
-        subgraph HierarchicalFlow["Mode B: Hierarchical Multi-Agent (Phase 9: Supervisor + Subgraphs)"]
-            direction LR
-            Sup["Supervisor Master"] -->|1. Dispatch Research| SubR
-            SubR -.->|2. Deliver Briefing| Sup
-            Sup -->|3. Dispatch Coding| SubC
-            SubC -.->|4. Deliver Code Artifact| Sup
-            Sup --> Syn["Synthesizer Node"]
+        subgraph Hierarchical["Hierarchical Multi-Agent (Phase 9: Supervisor + Subgraphs)"]
+            Supervisor[Supervisor Coordinator Node]
 
-            subgraph SubR["Researcher Subgraph (Private ResearcherState)"]
-                direction TB
-                RP["research_planner (Search Plan)"] <--> SE["search_executor (Retrieval)"]
+            subgraph ResearcherSubgraph["Researcher Subgraph (Private ResearcherState)"]
+                R_Plan["research_planner<br>Plan Search"] --> R_Router{"Info Sufficient?"}
+                R_Router -->|No| R_Exec["search_executor<br>Knowledge Search"]
+                R_Exec --> R_Plan
+                R_Router -->|Yes| R_Summary["Structured Report"]
             end
 
-            subgraph SubC["Coder Subgraph (Private CoderState)"]
-                direction TB
-                CD["coder_draft (Draft/Revise)"] --> CT{"coder_test (Self-Test)"}
-                CT -->|Failed Test| CD
+            subgraph CoderSubgraph["Coder Subgraph (Private CoderState)"]
+                C_Draft["coder_draft<br>Draft & Fix Code"] --> C_Test["coder_test<br>AST & Self Test"]
+                C_Test --> C_Router{"Tests Pass or Limit?"}
+                C_Router -->|Failed & < Limit| C_Draft
+                C_Router -->|Passed or Limit| C_Done["Finalized Code Asset"]
             end
+
+            Supervisor -->|1. Dispatch Research| R_Plan
+            R_Summary -.->|2. Deliver Report| Supervisor
+            Supervisor -->|3. Dispatch Coding| C_Draft
+            C_Done -.->|4. Deliver Code| Supervisor
+            Supervisor --> Synthesizer[Synthesizer Node]
         end
 
-        subgraph ParallelFlow["Mode C: Parallel Branch Review (Phase 10: Fan-Out / Fan-In)"]
-            direction LR
-            Disp["Dispatcher Node"]
-            Disp ==> Sec["Security Audit Node"]
-            Disp ==> Perf["Performance Analysis Node"]
-            Disp ==> Style["PEP8 Style Compliance Node"]
-            Sec & Perf & Style ==> Agg["Weighted Decision Aggregator"]
+        subgraph Parallel["Parallel Code Review (Phase 10: Fan-out / Fan-in)"]
+            Dispatcher[Dispatcher Node]
+            Dispatcher -.->|Fan-out| SecNode[Security Audit]
+            Dispatcher -.->|Fan-out| PerfNode[Complexity Analysis]
+            Dispatcher -.->|Fan-out| StyleNode[PEP8 Style Check]
+            SecNode --> Aggregator[Weighted Aggregator Node]
+            PerfNode --> Aggregator
+            StyleNode --> Aggregator
         end
+
+        Router -->|chat / run| Planner
+        Router -->|supervise| Supervisor
+        Router -->|review| Dispatcher
     end
 
-    %% 3. State & Persistence
-    subgraph StateLayer["3. State Management & Persistence (State & Storage)"]
+    subgraph StateManagement["State & Persistence Foundation"]
         direction LR
-        State["AgentState Single Source of Truth<br>(add_messages / append_reducer / merge_dict_reducer)"]
-        CP["SqliteSaver State Checkpointing<br>(Spatiotemporal Snapshots / Session Isolation / Time Travel)"]
+        State[(AgentState: Messages / Scratchpad / Reducers)]
+        Checkpointer[(SqliteSaver: Checkpoint Snapshots / Time Travel)]
     end
 
-    %% 4. Infrastructure & Integrations
-    subgraph InfraLayer["4. Infrastructure & Environment Integrations"]
+    subgraph Infra["Infrastructure & External Environment"]
         direction LR
-        LLM["LLM Adapter Layer<br>(Offline DemoModel / Universal OpenAI-Compatible Client)"]
-        Tools["Local Tools & Security Registry<br>(Calculator / SysInfo / FileRead / Sensitive Tool Registry)"]
+        ModelAdapter[LLM Adapter: DemoModel / OpenAI Compatible]
+        ExtTools[Local Tools / Sensitive Registry]
     end
 
-    %% Inter-layer relations
-    CLI -->|Initialize & Select Mode| EngineLayer
-    EngineLayer <-->|Read Immutable Snapshot / Atomic Reducer Commit| StateLayer
-    EngineLayer -.->|Model Inference| LLM
-    EngineLayer -.->|Tool Invocations| Tools
+    Engine <--> StateManagement
+    Engine -.-> ModelAdapter
+    Tool & R_Exec -.-> ExtTools
 ```
 
 ### End-to-End Execution Sequence (HITL Approval Example)
